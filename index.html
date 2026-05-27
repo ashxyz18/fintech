@@ -461,6 +461,118 @@
   </div>
 </section>
 
+<!-- ===== LIVE PAYOUTS ===== -->
+<section class="section section-payouts reveal">
+  <div class="container">
+    <div class="payouts-grid">
+      <div>
+        <span class="eyebrow" style="display:inline-block; font-size:0.78rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--green); padding:6px 14px; border:1px solid rgba(0,255,163,0.3); border-radius:999px; margin-bottom:18px; background:rgba(0,255,163,0.06);">Live · paid in last 24h</span>
+        <h2 style="margin-bottom:14px;">Withdrawals hit bank accounts <span class="gradient-text">in minutes</span>, not weeks.</h2>
+        <p class="text-dim" style="font-size:1.05rem; margin-bottom:24px;">No lockups. No "review periods". When you withdraw, our treasury releases funds within 30 minutes — to fiat or crypto. This counter ticks up in real time.</p>
+        <div class="payouts-counter-label"><span class="pulse"></span> Total paid out · last 24h</div>
+        <div class="payouts-counter" id="payoutsCounter">$1,842,317</div>
+        <div class="text-dim mt-md" style="font-size:0.95rem;">
+          Average withdrawal time: <strong style="color:var(--text);">22 min</strong> · Processed: <strong style="color:var(--text);">3,184</strong> · Success: <strong class="text-green">99.97%</strong>
+        </div>
+      </div>
+      <div class="payouts-feed" id="payoutsFeed"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ROI CALCULATOR ===== -->
+<section class="section reveal">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Project your returns</span>
+      <h2>See what your money <span class="gradient-text-mix">could become.</span></h2>
+      <p>Based on the AI's historical performance across each risk profile. Past performance is not a guarantee of future returns.</p>
+    </div>
+    <div class="calc-card" id="roiCalc">
+      <div class="calc-controls">
+        <div class="calc-field">
+          <label>Initial investment <strong id="calcAmtOut">$5,000</strong></label>
+          <input type="number" id="calcAmt" min="50" step="50" value="5000" />
+        </div>
+        <div class="calc-field">
+          <label>Time horizon <strong id="calcMonthsOut">12 months</strong></label>
+          <input type="range" id="calcMonths" min="1" max="60" value="12" />
+        </div>
+        <div class="calc-field">
+          <label>Risk profile <strong id="calcProfile">Balanced</strong></label>
+          <div class="calc-profiles">
+            <button data-profile="conservative">Conservative</button>
+            <button data-profile="balanced" class="active">Balanced</button>
+            <button data-profile="aggressive">Aggressive</button>
+          </div>
+        </div>
+        <div class="text-mute" style="font-size:0.78rem;">
+          <i class="fa-solid fa-circle-info"></i> Assumes monthly compounding at the AI's target net yield.
+        </div>
+      </div>
+      <div class="calc-result">
+        <div class="label">Projected portfolio value</div>
+        <div class="big" id="calcResult">$6,089</div>
+        <div class="delta" id="calcDelta">+$1,089 (+21.8%)</div>
+        <div class="text-mute mt-md" style="font-size:0.8rem;" id="calcApy">20% APY target</div>
+        <div class="breakdown">
+          <div class="row"><span class="lbl">Min deposit</span><span class="val">$50</span></div>
+          <div class="row"><span class="lbl">Withdrawal</span><span class="val text-green">Anytime</span></div>
+          <div class="row"><span class="lbl">Fees on first $1k</span><span class="val text-green">$0</span></div>
+          <div class="row"><span class="lbl">Performance fee</span><span class="val">15%</span></div>
+        </div>
+        <a href="signup.html" class="btn btn-primary btn-block mt-lg">
+          Start with this plan <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="section reveal" style="background: linear-gradient(180deg, transparent, rgba(31,109,255,0.04), transparent);">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Common questions</span>
+      <h2>Everything you'd <span class="gradient-text">want to ask.</span></h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item open">
+        <button class="faq-q">Is my money actually safe?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">Customer funds are held with regulated custodians (Fireblocks, BitGo) in cold storage with multi-sig wallets. CryptoVault is SOC 2 Type II certified, and digital assets are insured up to $250M per account by Lloyd's of London. We never touch principal — only the AI's allocated trading capital ever moves.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">How fast can I withdraw?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">There is no lockup. Once you click withdraw, fiat hits your bank in 22 minutes on average (US/EU/UK), and crypto withdrawals settle on-chain within 10 minutes. The Live Payouts counter above updates as withdrawals clear.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">What is the minimum investment?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">$50 to start. No paperwork, no accreditation, no income requirements — just an email and a payment method. The Aggressive profile has a $250 minimum due to its higher per-trade sizing.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">How does the AI actually make money?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">Vault AI runs 10 underlying strategies — trend-ADX, MACD-volume, VWAP pullbacks, order-flow imbalance, mean-reversion, breakout, and more — across 6 asset classes. It detects the market regime (trending / ranging / volatile) and only enters when 2+ strategies agree, signal strength is above 72%, and risk-to-reward is at least 3:1.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">What are the fees?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">Zero fees on the first $1,000 deposited. After that: 0% management fee, 15% performance fee on profits only (the high-water mark model — we only earn when you earn, and only on new gains). No deposit, withdrawal, or platform fees ever.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I lose money?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">Yes — every market-traded product carries risk. Capital is not guaranteed. Vault AI ships with a 5% daily-loss circuit breaker per profile and per-trade stop-losses, but historical performance does not guarantee future results. Only invest what you can afford to lose.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Is CryptoVault available in my country?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">Available in 90+ countries including the US, UK, EU, Canada, Australia, Brazil, India, Singapore, and most of Africa. We are not currently available in sanctioned jurisdictions (e.g., North Korea, Iran, Russia) or US states with conflicting regulation (NY, HI).</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">How do I get started?<span class="chev"><i class="fa-solid fa-chevron-down"></i></span></button>
+        <div class="faq-a">Click "Get started" up top, sign up with email in 60 seconds, deposit by card / bank / crypto, pick a risk profile, and the bots take over. You can pause, withdraw, or change profile at any time from your dashboard.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== CTA ===== -->
 <section class="section" style="text-align:center;">
   <div class="container">

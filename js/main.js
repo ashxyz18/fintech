@@ -323,3 +323,167 @@ function tickPrice(inst) {
   inst.chg = +(inst.chg + (Math.random() - 0.5) * 0.05).toFixed(2);
   return inst;
 }
+
+
+
+/* =========================================================
+   PAYOUT BAR (in-app strip on dashboard / trading / markets)
+   + landing-page Live Payouts feed + ROI calculator + FAQ
+   ========================================================= */
+
+const PB_NAMES = [
+  ['Sarah','London,UK'],['Marcus','Austin,TX'],['Aisha','Dubai,UAE'],['Hiroshi','Tokyo,JP'],
+  ['Lukas','Berlin,DE'],['Olivia','Sydney,AU'],['Mateo','Madrid,ES'],['Priya','Mumbai,IN'],
+  ['Chen','Shanghai,CN'],['Eva','Stockholm,SE'],['Diego','Mexico City,MX'],['Noah','Toronto,CA'],
+  ['Emma','Paris,FR'],['Lars','Oslo,NO'],['Yusuf','Istanbul,TR'],['Ananya','Bangalore,IN'],
+  ['Liam','Dublin,IE'],['Mia','Auckland,NZ'],['Carlos','São Paulo,BR'],['Zoe','Cape Town,ZA'],
+];
+function pbInitials(name){ return name.slice(0,1).toUpperCase(); }
+function pbAmount() {
+  // Realistic spread of withdrawals, biased to mid-sized
+  const r = Math.random();
+  if (r < 0.55) return Math.round((200 + Math.random() * 1800) / 10) * 10;
+  if (r < 0.85) return Math.round((2000 + Math.random() * 6000) / 50) * 50;
+  if (r < 0.97) return Math.round((8000 + Math.random() * 18000) / 100) * 100;
+  return Math.round((25000 + Math.random() * 75000) / 500) * 500;
+}
+function pbAgo() {
+  const m = Math.floor(Math.random() * 12) + 1;
+  return m === 1 ? 'just now' : m + 'm ago';
+}
+function pbItems(n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const [name, city] = PB_NAMES[Math.floor(Math.random() * PB_NAMES.length)];
+    out.push({ name, city, amt: pbAmount(), ago: pbAgo() });
+  }
+  return out;
+}
+
+/* In-app top strip — renders into [data-payout-bar] containers */
+function buildPayoutBar() {
+  document.querySelectorAll('[data-payout-bar]').forEach(host => {
+    const items = pbItems(14);
+    const total = 1840000 + Math.floor(Math.random() * 60000);
+    const itemHtml = items.map(it => `
+      <span class="pb-item">
+        <span class="pb-icon"><i class="fa-solid fa-arrow-up"></i></span>
+        <span class="pb-who">${it.name}</span>
+        <span class="text-mute">from</span>
+        <span>${it.city}</span>
+        <span class="text-mute">·</span>
+        <span>just withdrew</span>
+        <span class="pb-amt">$${it.amt.toLocaleString()}</span>
+        <span class="text-mute">${it.ago}</span>
+      </span>
+    `).join('');
+    host.innerHTML = `
+      <div class="pb-label"><span class="dot"></span> Live payouts</div>
+      <div class="pb-track"><div class="pb-row">${itemHtml}${itemHtml}</div></div>
+      <div class="pb-total"><i class="fa-solid fa-shield"></i> <strong>$${total.toLocaleString()}</strong> paid · 24h</div>
+    `;
+  });
+}
+
+/* Landing-page payouts feed — pushes a new row every few seconds */
+function buildLandingPayouts() {
+  const feed = document.getElementById('payoutsFeed');
+  const counter = document.getElementById('payoutsCounter');
+  if (!feed || !counter) return;
+
+  let total = 1842317;
+  const seed = pbItems(6);
+  feed.innerHTML = seed.map(rowHtml).join('');
+  paintCounter();
+
+  setInterval(() => {
+    const it = pbItems(1)[0];
+    total += it.amt;
+    paintCounter();
+    const div = document.createElement('div');
+    div.innerHTML = rowHtml(it);
+    feed.insertBefore(div.firstElementChild, feed.firstChild);
+    while (feed.children.length > 6) feed.removeChild(feed.lastChild);
+  }, 4200);
+
+  function paintCounter() {
+    counter.textContent = '$' + total.toLocaleString();
+  }
+  function rowHtml(it) {
+    return `
+      <div class="payout-row">
+        <div class="pa-avatar">${pbInitials(it.name)}</div>
+        <div>
+          <div class="pa-who">${it.name} <span class="text-mute" style="font-weight:400;">from ${it.city}</span></div>
+          <div class="pa-meta">Withdrew to bank · ${it.ago}</div>
+        </div>
+        <div class="pa-amt">+$${it.amt.toLocaleString()}</div>
+      </div>
+    `;
+  }
+}
+
+/* Returns calculator — projects compounded value across risk profiles */
+function buildCalculator() {
+  const root = document.getElementById('roiCalc');
+  if (!root) return;
+  const PROFILES = {
+    conservative: { name: 'Conservative', monthly: 0.0085, yearly: 0.10 }, // ~10% APY
+    balanced:     { name: 'Balanced',     monthly: 0.0165, yearly: 0.20 }, // ~20% APY
+    aggressive:   { name: 'Aggressive',   monthly: 0.0245, yearly: 0.30 }, // ~30% APY
+  };
+  let profile = 'balanced';
+  const $ = sel => root.querySelector(sel);
+
+  function fmtCash(n) {
+    return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  }
+  function recalc() {
+    const amt = Math.max(50, parseFloat($('#calcAmt').value || 0));
+    const months = parseInt($('#calcMonths').value, 10);
+    const r = PROFILES[profile].monthly;
+    const fv = amt * Math.pow(1 + r, months);
+    const profit = fv - amt;
+    const pct = ((fv / amt) - 1) * 100;
+    $('#calcResult').textContent = fmtCash(fv);
+    $('#calcDelta').textContent = '+' + fmtCash(profit) + '  (+' + pct.toFixed(1) + '%)';
+    $('#calcMonthsOut').textContent = months + ' month' + (months === 1 ? '' : 's');
+    $('#calcAmtOut').textContent = fmtCash(amt);
+    $('#calcProfile').textContent = PROFILES[profile].name;
+    $('#calcApy').textContent = (PROFILES[profile].yearly * 100).toFixed(0) + '% APY target';
+    // visual fill on the slider
+    const r1 = $('#calcMonths');
+    const pct2 = ((months - +r1.min) / (+r1.max - +r1.min)) * 100;
+    r1.style.setProperty('--p', pct2 + '%');
+  }
+  root.querySelectorAll('.calc-profiles button').forEach(b => {
+    b.addEventListener('click', () => {
+      profile = b.dataset.profile;
+      root.querySelectorAll('.calc-profiles button').forEach(x => x.classList.toggle('active', x === b));
+      recalc();
+    });
+  });
+  $('#calcAmt').addEventListener('input', recalc);
+  $('#calcMonths').addEventListener('input', recalc);
+  recalc();
+}
+
+/* FAQ accordion */
+function buildFaq() {
+  document.querySelectorAll('.faq-item').forEach(item => {
+    const q = item.querySelector('.faq-q');
+    if (!q) return;
+    q.addEventListener('click', () => {
+      // close others (single-open accordion)
+      document.querySelectorAll('.faq-item.open').forEach(x => { if (x !== item) x.classList.remove('open'); });
+      item.classList.toggle('open');
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildPayoutBar();
+  buildLandingPayouts();
+  buildCalculator();
+  buildFaq();
+});

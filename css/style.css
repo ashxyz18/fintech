@@ -1233,3 +1233,301 @@ h3 { font-size: 1.4rem; }
 /* Marquee logos */
 .logos-strip { display:flex; gap: 60px; opacity: 0.6; align-items:center; flex-wrap:wrap; justify-content: center; padding: 30px 0; filter: grayscale(1); }
 .logos-strip span { font-weight: 700; letter-spacing: 0.15em; font-size: 0.95rem; }
+
+
+/* ============================================
+   PAYOUT BAR (in-app live withdrawals strip)
+   Used on dashboard / trading / markets
+   ============================================ */
+.payout-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 18px;
+  margin: 0 0 22px;
+  background:
+    linear-gradient(90deg, rgba(0,255,163,0.10), rgba(0,162,255,0.06) 40%, rgba(255,0,60,0.06));
+  border: 1px solid rgba(0,255,163,0.22);
+  border-radius: 14px;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.payout-bar::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 0% 50%, rgba(0,255,163,0.18), transparent 55%);
+  pointer-events: none;
+}
+.payout-bar .pb-label {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 0.74rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--green);
+  z-index: 1;
+}
+.payout-bar .pb-label .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 12px var(--green);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.payout-bar .pb-track {
+  flex: 1 1 auto;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+.payout-bar .pb-row {
+  display: inline-flex;
+  gap: 40px;
+  white-space: nowrap;
+  animation: payoutScroll 55s linear infinite;
+  padding-right: 40px;
+}
+.payout-bar:hover .pb-row { animation-play-state: paused; }
+.payout-bar .pb-item {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 0.86rem; color: var(--text-dim);
+}
+.payout-bar .pb-item .pb-icon {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(0,255,163,0.15); color: var(--green);
+  font-size: 0.7rem;
+}
+.payout-bar .pb-item .pb-amt { color: var(--green); font-weight: 800; }
+.payout-bar .pb-item .pb-who { color: var(--text); font-weight: 600; }
+.payout-bar .pb-total {
+  flex: 0 0 auto;
+  font-size: 0.82rem; color: var(--text-dim);
+  display: flex; align-items: center; gap: 6px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  z-index: 1;
+}
+.payout-bar .pb-total strong { color: var(--text); font-weight: 800; }
+
+@keyframes payoutScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@media (max-width: 720px) {
+  .payout-bar .pb-total { display: none; }
+  .payout-bar .pb-label { font-size: 0.68rem; letter-spacing: 0.12em; }
+}
+
+/* ============================================
+   LANDING — LIVE PAYOUTS SECTION
+   ============================================ */
+.section-payouts {
+  background:
+    radial-gradient(ellipse 60% 40% at 80% 50%, rgba(0,255,163,0.08), transparent 60%),
+    linear-gradient(180deg, transparent, rgba(0,255,163,0.04), transparent);
+}
+.payouts-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.4fr;
+  gap: 32px;
+  align-items: center;
+}
+.payouts-counter {
+  font-size: clamp(2.6rem, 5vw, 4rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--green);
+  text-shadow: 0 0 30px rgba(0,255,163,0.25);
+  font-variant-numeric: tabular-nums;
+}
+.payouts-counter-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 12px;
+}
+.payouts-feed {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 380px;
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(180deg, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, black 10%, black 90%, transparent);
+}
+.payout-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  animation: payoutFadeIn 0.5s ease;
+}
+.payout-row .pa-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--blue), var(--blue-glow));
+  font-weight: 800; font-size: 0.85rem; color: white;
+}
+.payout-row .pa-who { font-weight: 600; }
+.payout-row .pa-meta { font-size: 0.78rem; color: var(--text-mute); margin-top: 2px; }
+.payout-row .pa-amt {
+  font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums;
+}
+@keyframes payoutFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 880px) { .payouts-grid { grid-template-columns: 1fr; } }
+
+/* ============================================
+   LANDING — RETURNS CALCULATOR
+   ============================================ */
+.calc-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  position: relative;
+  overflow: hidden;
+}
+.calc-card::before {
+  content: "";
+  position: absolute; inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--grad-mix);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.calc-controls .calc-field { margin-bottom: 22px; }
+.calc-controls label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 600;
+}
+.calc-controls label strong { color: var(--text); font-weight: 800; font-size: 1.05rem; }
+.calc-controls input[type="number"] {
+  width: 100%;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: inherit;
+}
+.calc-controls input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none; appearance: none;
+  height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--blue) var(--p, 50%), rgba(255,255,255,0.08) var(--p, 50%));
+  outline: none;
+}
+.calc-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; border: 3px solid var(--blue-glow);
+  box-shadow: 0 0 10px rgba(0,162,255,0.6);
+  cursor: pointer;
+}
+.calc-controls input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; border: 3px solid var(--blue-glow); cursor: pointer;
+}
+.calc-profiles {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.calc-profiles button {
+  padding: 10px 6px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 0.82rem; font-weight: 700;
+  transition: all 0.2s ease;
+}
+.calc-profiles button.active {
+  border-color: var(--blue-glow);
+  color: var(--text);
+  background: rgba(31,109,255,0.12);
+  box-shadow: 0 0 18px rgba(0,162,255,0.18);
+}
+.calc-result {
+  display: flex; flex-direction: column; justify-content: center;
+  text-align: center;
+  padding: 24px;
+  background: var(--bg-elev);
+  border-radius: var(--radius);
+  border: 1px solid rgba(0,255,163,0.18);
+}
+.calc-result .label {
+  font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 8px;
+}
+.calc-result .big {
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  font-weight: 900; letter-spacing: -0.03em;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 30px rgba(0,255,163,0.2);
+}
+.calc-result .delta { color: var(--green); font-weight: 700; margin-top: 4px; }
+.calc-result .breakdown {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-top: 22px; text-align: left;
+}
+.calc-result .breakdown .row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.calc-result .breakdown .row:last-child { border-bottom: none; }
+.calc-result .breakdown .lbl { color: var(--text-dim); }
+.calc-result .breakdown .val { font-weight: 700; }
+@media (max-width: 800px) { .calc-card { grid-template-columns: 1fr; padding: 24px; } }
+
+/* ============================================
+   LANDING — FAQ
+   ============================================ */
+.faq-list { display: grid; gap: 12px; max-width: 880px; margin: 0 auto; }
+.faq-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+.faq-item.open { border-color: var(--border-glow); }
+.faq-q {
+  width: 100%;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 22px;
+  font-size: 1rem; font-weight: 700;
+  text-align: left;
+  color: var(--text);
+}
+.faq-q .chev {
+  flex: 0 0 auto;
+  color: var(--blue-glow);
+  transition: transform 0.25s ease;
+}
+.faq-item.open .faq-q .chev { transform: rotate(180deg); }
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 0 22px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.faq-item.open .faq-a { max-height: 320px; padding: 0 22px 20px; }
