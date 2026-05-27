@@ -1332,3 +1332,477 @@ MasterAI.prototype._strategiesForRegime = function (regime) {
   }
   return cfg;
 };
+
+
+
+/* ================================================================
+   v4 · ALGO ENHANCEMENTS — sophisticated quant layer
+   - New indicators: Choppiness Index, Donchian, Keltner, Heikin-Ashi
+   - New strategies: Donchian breakout, Keltner squeeze, Heikin-Ashi
+     trend-confirm, Round-number magnet
+   - Kelly-criterion position sizing (fractional, capped)
+   - Adaptive signal-strength threshold (tightens when win rate drops)
+   - Strategy-weight learning (each strategy's vote weighted by its
+     own rolling win rate)
+   - Session filter (Asian / European / US) — different strategy mix
+     and risk per session
+   - Anti-overtrading cooldown (max trades per hour per symbol)
+   - Pyramiding into winners (adds size when up +1R, with new SL at
+     break-even, capped to 1 add-on leg)
+   - Extra metrics: Sortino ratio, Calmar ratio, max consecutive
+     losses, profit-loss ratio, recovery factor
+   - Monte Carlo bootstrap of the closed-trade list
+   ================================================================ */
+
+/* =============== EXTRA INDICATORS (v4) =============== */
+Object.assign(Indicators, {
+  // Choppiness Index — 0-100, high=ranging, low=trending
+  // Approximation using close-only series (no true range available):
+  //   CI = 100 * log10( SUM(|close[i]-close[i-1]|) / (max-min) ) / log10(p)
+  choppiness(arr, p = 14) {
+    if (arr.length < p + 1) return null;
+    const slice = arr.slice(-p);
+    let sumMove = 0;
+    for (let i = arr.length - p; i < arr.length; i++) {
+      sumMove += Math.abs(arr[i] - arr[i - 1]);
+    }
+    const range = Math.max(...slice) - Math.min(...slice);
+    if (range === 0) return 50;
+    return 100 * Math.log10(sumMove / range) / Math.log10(p);
+  },
+
+  // Donchian channel — n-bar high/low
+  donchian(arr, p = 20) {
+    if (arr.length < p) return null;
+    const slice = arr.slice(-p);
+    return { upper: Math.max(...slice), lower: Math.min(...slice), mid: (Math.max(...slice) + Math.min(...slice)) / 2 };
+  },
+
+  // Keltner channel — EMA20 ± mult * ATR
+  keltner(arr, p = 20, mult = 2) {
+    if (arr.length < p + 14) return null;
+    const ema = Indicators.ema(arr, p);
+    const atr = Indicators.atr(arr, 14);
+    if (!ema || !atr) return null;
+    return { mid: ema, upper: ema + mult * atr, lower: ema - mult * atr, width: 2 * mult * atr / ema };
+  },
+
+  // Heikin-Ashi close-only smoothing.
+  // Returns array of HA "closes". HA close ≈ EMA-2 of price; HA "open"
+  // approximated by the previous HA close. We mostly care about the
+  // direction streak.
+  heikinAshi(arr) {
+    if (arr.length < 4) return null;
+    const ha = [];
+    for (let i = 0; i < arr.length; i++) {
+      if (i === 0) { ha.push(arr[0]); continue; }
+      ha.push((ha[i - 1] + arr[i]) / 2);
+    }
+    return ha;
+  },
+
+  // Counts consecutive same-direction Heikin-Ashi bars at the end of series
+  haStreak(arr) {
+    const ha = Indicators.heikinAshi(arr);
+    if (!ha) return 0;
+    let streak = 0;
+    for (let i = ha.length - 1; i > 0; i--) {
+      const dir = Math.sign(ha[i] - ha[i - 1]);
+      if (i === ha.length - 1) { streak = dir; continue; }
+      if (Math.sign(streak) === dir) streak += dir;
+      else break;
+    }
+    return streak; // positive = up streak, negative = down streak
+  },
+});
+
+/* =============== EXTRA STRATEGIES (v4) =============== */
+Object.assign(Strategies, {
+
+  // 16. Donchian channel breakout — classic Turtle entry, only in trends
+  donchianBreak(prices) {
+    if (prices.length < 25) return null;
+    const adx = Indicators.adx(prices, 14);
+    if (!adx || adx < 20) return { signal: 'HOLD', strength: 0, reason: 'ADX too low — skip Donchian.' };
+    const dc = Indicators.donchian(prices, 20);
+    if (!dc) return null;
+    const last = prices[prices.length - 1];
+    if (last >= dc.upper * 0.999) {
+      return { signal: 'BUY', strength: 0.8,
+        reason: `Donchian 20-bar breakout above ${dc.upper.toFixed(2)} — trend continuation.` };
+    }
+    if (last <= dc.lower * 1.001) {
+      return { signal: 'SELL', strength: 0.8,
+        reason: `Donchian 20-bar breakdown below ${dc.lower.toFixed(2)} — trend continuation.` };
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'Inside Donchian channel.' };
+  },
+
+  // 17. Keltner squeeze release — Bollinger inside Keltner = "squeeze",
+  //     when price exits the squeeze in either direction we trade the move.
+  keltnerSqueeze(prices) {
+    if (prices.length < 40) return null;
+    const bb = Indicators.bollinger(prices, 20, 2);
+    const kc = Indicators.keltner(prices, 20, 1.5);
+    if (!bb || !kc) return null;
+    const inSqueeze = bb.upper < kc.upper && bb.lower > kc.lower;
+    const wasSqueeze = (() => {
+      // Check 5 bars ago
+      const past = prices.slice(0, -5);
+      if (past.length < 40) return false;
+      const bp = Indicators.bollinger(past, 20, 2);
+      const kp = Indicators.keltner(past, 20, 1.5);
+      if (!bp || !kp) return false;
+      return bp.upper < kp.upper && bp.lower > kp.lower;
+    })();
+    if (!wasSqueeze || inSqueeze) return { signal: 'HOLD', strength: 0, reason: 'Still in (or no) squeeze.' };
+
+    const last = prices[prices.length - 1];
+    const prev = prices[prices.length - 6];
+    const momentum = (last - prev) / prev;
+    if (momentum > 0.005) {
+      return { signal: 'BUY', strength: 0.86,
+        reason: `Keltner squeeze released bullish — vol expansion +${(momentum*100).toFixed(2)}%.` };
+    }
+    if (momentum < -0.005) {
+      return { signal: 'SELL', strength: 0.85,
+        reason: `Keltner squeeze released bearish — vol expansion ${(momentum*100).toFixed(2)}%.` };
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'Squeeze released but no momentum.' };
+  },
+
+  // 18. Heikin-Ashi trend confirmation — 4+ bars in the same direction
+  //     filtered by EMA50 to avoid counter-trend signals.
+  heikinAshiTrend(prices) {
+    if (prices.length < 60) return null;
+    const streak = Indicators.haStreak(prices);
+    const ema50 = Indicators.ema(prices, 50);
+    if (ema50 == null) return null;
+    const last = prices[prices.length - 1];
+
+    if (streak >= 4 && last > ema50) {
+      return { signal: 'BUY', strength: Math.min(0.85, 0.6 + streak * 0.05),
+        reason: `Heikin-Ashi ${streak} consecutive up bars above EMA50 — clean uptrend.` };
+    }
+    if (streak <= -4 && last < ema50) {
+      return { signal: 'SELL', strength: Math.min(0.85, 0.6 + Math.abs(streak) * 0.05),
+        reason: `Heikin-Ashi ${Math.abs(streak)} consecutive down bars below EMA50 — clean downtrend.` };
+    }
+    return { signal: 'HOLD', strength: 0, reason: `HA streak ${streak} — no clean trend.` };
+  },
+
+  // 19. Round-number magnet — price tends to gravitate toward and bounce
+  //     off psychological round levels (e.g. 100, 1.10, 50000). We fade
+  //     fast moves into round numbers.
+  roundNumber(prices) {
+    if (prices.length < 20) return null;
+    const last = prices[prices.length - 1];
+    const atr = Indicators.atr(prices, 14);
+    if (!atr) return null;
+    // Pick a round level near the price. Magnitude scales with price.
+    const mag = Math.pow(10, Math.floor(Math.log10(last)));
+    const round = Math.round(last / mag) * mag;
+    const distPct = Math.abs(last - round) / last;
+    if (distPct > 0.003) return { signal: 'HOLD', strength: 0, reason: 'Far from round number.' };
+    // Was the move into the round number sharp? (e.g. >1.5x ATR in last 5)
+    const move = Math.abs(last - prices[prices.length - 6]);
+    if (move < atr * 1.5) return { signal: 'HOLD', strength: 0, reason: 'Approach to round number too slow.' };
+    // Approaching from below = potential resistance → SELL fade
+    if (last > prices[prices.length - 6] && last <= round * 1.0008) {
+      return { signal: 'SELL', strength: 0.72,
+        reason: `Price spiked into round number ${round.toFixed(0)} — fading the resistance test.` };
+    }
+    // Approaching from above = potential support → BUY fade
+    if (last < prices[prices.length - 6] && last >= round * 0.9992) {
+      return { signal: 'BUY', strength: 0.72,
+        reason: `Price flushed into round number ${round.toFixed(0)} — fading the support test.` };
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'No clean round-number setup.' };
+  },
+});
+
+/* =============== STRATEGY WEIGHT LEARNING =============== */
+// Every closed trade contributes to the rolling win-rate of each strategy
+// that voted on it. Future votes from a strategy are scaled by its weight.
+AlgoBot.prototype._strategyStats = function () {
+  return this._stratStats || (this._stratStats = {});
+};
+AlgoBot.prototype._strategyWeight = function (name) {
+  const s = this._strategyStats()[name];
+  if (!s || s.total < 5) return 1.0; // not enough data → neutral
+  const wr = s.wins / s.total;
+  // Map win rate 30-70% → weight 0.5-1.5, clamped.
+  const w = 0.5 + (wr - 0.3) * 2.5;
+  return Math.max(0.4, Math.min(1.6, w));
+};
+AlgoBot.prototype._recordStrategyResult = function (strategyKey, win) {
+  const stats = this._strategyStats();
+  const s = stats[strategyKey] || (stats[strategyKey] = { total: 0, wins: 0 });
+  s.total += 1;
+  if (win) s.wins += 1;
+};
+
+/* =============== ADAPTIVE THRESHOLD =============== */
+// If recent win rate drops, tighten the minSignalStrength so we only
+// take the highest-conviction setups. If it rises, loosen slightly.
+AlgoBot.prototype._adaptiveThreshold = function (baseThr) {
+  const recent = this.closedTrades.slice(0, 30);
+  if (recent.length < 15) return baseThr;
+  const wins = recent.filter(t => t.pl > 0).length;
+  const wr = wins / recent.length;
+  if (wr < 0.40) return Math.min(0.95, baseThr + 0.06); // tighten
+  if (wr > 0.60) return Math.max(0.65, baseThr - 0.03); // loosen
+  return baseThr;
+};
+
+/* =============== KELLY-CRITERION SIZING =============== */
+// Fractional Kelly capped at 25% of full Kelly, with a hard ceiling at
+// 5% of equity per trade. Falls back to base sizing until 20+ closed
+// trades have accumulated.
+AlgoBot.prototype._kellyFraction = function () {
+  if (this.closedTrades.length < 20) return null;
+  const wins = this.closedTrades.filter(t => t.pl > 0);
+  const losses = this.closedTrades.filter(t => t.pl <= 0);
+  if (!wins.length || !losses.length) return null;
+  const W = wins.length / this.closedTrades.length;
+  const avgWin  = wins.reduce((a, b) => a + b.pl, 0) / wins.length;
+  const avgLoss = Math.abs(losses.reduce((a, b) => a + b.pl, 0) / losses.length);
+  if (avgLoss === 0) return null;
+  const R = avgWin / avgLoss;
+  // f* = W - (1 - W) / R
+  const fStar = W - (1 - W) / R;
+  if (fStar <= 0) return 0.005; // negative edge → minimum size
+  const fractional = fStar * 0.25; // quarter-Kelly
+  return Math.min(0.05, Math.max(0.005, fractional));
+};
+
+/* =============== SESSION FILTER =============== */
+// UTC-based trading session classifier. The Master AI uses this to
+// bias which asset classes / strategies it favors.
+function currentSession(date = new Date()) {
+  const h = date.getUTCHours();
+  if (h >= 0 && h < 7)   return 'ASIAN';
+  if (h >= 7 && h < 12)  return 'EUROPEAN';
+  if (h >= 12 && h < 17) return 'OVERLAP'; // EU+US overlap — most volume
+  if (h >= 17 && h < 21) return 'US';
+  return 'OFF_HOURS';
+}
+
+// Symbol ↔ session affinity. Master AI down-weights mismatched pairs.
+function sessionAffinity(sym, session) {
+  if (session === 'ASIAN') {
+    if (['USDJPY', 'NKY', 'HSI', 'JP10Y'].includes(sym)) return 1.2;
+    if (['BTC','ETH','SOL','BNB','BTC-PERP','ETH-PERP'].includes(sym)) return 1.0;
+    return 0.7;
+  }
+  if (session === 'EUROPEAN') {
+    if (['EURUSD','GBPUSD','EURGBP','DAX','FTSE','CAC','DE10Y','UK10Y'].includes(sym)) return 1.2;
+    return 0.95;
+  }
+  if (session === 'US' || session === 'OVERLAP') {
+    if (['SPX','NDX','DJI','AAPL','TSLA','NVDA','MSFT','AMZN','GOOGL','META','JPM','V','BRK.B','ES','NQ','YM','US10Y','US30Y','US2Y'].includes(sym)) return 1.2;
+    return 1.0;
+  }
+  return 0.85;
+}
+
+/* =============== ANTI-OVERTRADING COOLDOWN =============== */
+// No more than 3 trades per hour per symbol. Prevents the bot from
+// thrashing the same instrument when conviction is shaky.
+AlgoBot.prototype._tooMuchTrading = function (sym) {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  const recent = this.closedTrades.filter(t => t.sym === sym && t.time > cutoff);
+  // Open positions don't count yet (they'll count when they close).
+  return recent.length >= 3;
+};
+
+/* =============== PYRAMIDING =============== */
+// When a position reaches +1R in profit, we add a smaller leg with a
+// new SL set at the original entry (so the add-on is risk-free).
+// Capped at 1 add-on per position to avoid stacking too much risk.
+AlgoBot.prototype._tryPyramid = function (inst) {
+  const pos = this.positions[inst.sym];
+  if (!pos) return null;
+  if (pos.pyramided) return null;
+  const dir = pos.side === 'BUY' ? 1 : -1;
+  const plPct = ((inst.price - pos.entry) / pos.entry) * dir;
+  const slPct = pos.stopLossPct ?? this.cfg.stopLossPct;
+  if (plPct < slPct) return null; // not yet at +1R
+  // Add 50% of original size at current price, SL at original entry
+  const addDollars = pos.dollars * 0.5;
+  const addQty = addDollars / inst.price;
+  pos.qty += addQty;
+  pos.dollars += addDollars;
+  pos.entry = (pos.entry * (pos.qty - addQty) + inst.price * addQty) / pos.qty; // VWAP
+  // Move SL to break-even (at the new average entry → roughly the original entry)
+  pos.stopLoss = pos.entry; // exact break-even
+  pos.pyramided = true;
+  this.log.unshift({
+    time: Date.now(), sym: inst.sym, asset: pos.asset,
+    action: 'PYRAMID',
+    price: inst.price, qty: addQty, dollars: addDollars,
+    reason: `Position up +${(plPct*100).toFixed(2)}% — adding 50% leg at break-even SL.`,
+    strategy: pos.strategy,
+  });
+  return { ...this.log[0] };
+};
+
+/* =============== EXTRA METRICS =============== */
+AlgoBot.prototype.advancedMetrics = function () {
+  const base = this.metrics();
+  const closed = this.closedTrades;
+  if (!closed.length) return { ...base, sortino: 0, calmar: 0, maxConsecLosses: 0, recoveryFactor: 0 };
+
+  const returns = closed.map(t => t.pl / this.startEquity);
+  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const downside = returns.filter(r => r < 0);
+  const downStd = downside.length
+    ? Math.sqrt(downside.reduce((a, b) => a + b * b, 0) / downside.length)
+    : 0.0001;
+  const sortino = (mean / downStd) * Math.sqrt(252);
+
+  // Max drawdown from synthetic equity curve based on closed trades
+  let eq = this.startEquity, peak = eq, maxDD = 0;
+  for (const t of closed.slice().reverse()) { // oldest first
+    eq += t.pl;
+    if (eq > peak) peak = eq;
+    const dd = (eq - peak) / peak;
+    if (dd < maxDD) maxDD = dd;
+  }
+  const totalReturn = (this.equity - this.startEquity) / this.startEquity;
+  const calmar = maxDD < 0 ? totalReturn / Math.abs(maxDD) : totalReturn * 10;
+
+  // Max consecutive losses
+  let cons = 0, max = 0;
+  for (const t of closed.slice().reverse()) {
+    if (t.pl <= 0) { cons += 1; if (cons > max) max = cons; }
+    else cons = 0;
+  }
+
+  const recoveryFactor = maxDD < 0 ? Math.abs(totalReturn / maxDD) : 0;
+
+  return {
+    ...base,
+    sortino: +sortino.toFixed(2),
+    calmar:  +calmar.toFixed(2),
+    maxConsecLosses: max,
+    recoveryFactor: +recoveryFactor.toFixed(2),
+  };
+};
+
+/* =============== MONTE CARLO SIMULATOR =============== */
+// Bootstrap-resamples the closed trades 1000 times to estimate the
+// distribution of final equity. Returns 5/50/95 percentile ending
+// balances and the probability of finishing above starting equity.
+function monteCarlo(bot, runs = 1000) {
+  const trades = bot.closedTrades;
+  if (trades.length < 10) return null;
+  const finals = [];
+  let positive = 0;
+  for (let r = 0; r < runs; r++) {
+    let eq = bot.startEquity;
+    for (let i = 0; i < trades.length; i++) {
+      const t = trades[Math.floor(Math.random() * trades.length)];
+      eq += t.pl;
+    }
+    finals.push(eq);
+    if (eq > bot.startEquity) positive += 1;
+  }
+  finals.sort((a, b) => a - b);
+  const p = (q) => finals[Math.floor(finals.length * q)];
+  return {
+    runs,
+    p05: +p(0.05).toFixed(2),
+    p50: +p(0.50).toFixed(2),
+    p95: +p(0.95).toFixed(2),
+    probProfit: +(positive / runs).toFixed(3),
+    startEquity: bot.startEquity,
+    avgFinal: +(finals.reduce((a, b) => a + b, 0) / finals.length).toFixed(2),
+  };
+}
+
+/* =============== HOOK INTO MASTERAI =============== */
+// Patch MasterAI._maybeOpen one more time to apply: cooldown, session
+// affinity, weighted votes, adaptive threshold, Kelly sizing.
+const _v4origMaybeOpen = MasterAI.prototype._maybeOpen;
+MasterAI.prototype._maybeOpen = function (inst) {
+  if (this.positions[inst.sym]) return null;
+
+  // Anti-overtrading
+  if (this._tooMuchTrading(inst.sym)) return null;
+
+  // Apply Kelly sizing if available
+  const kelly = this._kellyFraction();
+  if (kelly != null) {
+    this._baseRiskPerTrade = kelly;
+  }
+
+  // Apply session-aware risk
+  const session = currentSession();
+  const aff = sessionAffinity(inst.sym, session);
+  // Skip low-affinity instruments outside their session unless very high conviction
+  if (aff < 0.8) {
+    // We still allow the trade, but with tighter threshold via an internal flag.
+    this._sessionTightening = 0.06;
+  } else {
+    this._sessionTightening = 0;
+  }
+
+  // Adaptive minSignalStrength — applied transiently before the call
+  const baseThr = this.cfg.minSignalStrength;
+  const adaptive = this._adaptiveThreshold(baseThr) + (this._sessionTightening || 0);
+  this.cfg.minSignalStrength = adaptive;
+
+  const ev = _v4origMaybeOpen.call(this, inst);
+
+  // Restore base threshold
+  this.cfg.minSignalStrength = baseThr;
+
+  return ev;
+};
+
+// Patch _close so we can record per-strategy stats and clear pyramid flag.
+const _v4origClose = AlgoBot.prototype._close;
+AlgoBot.prototype._close = function (inst, price, kind, reason) {
+  const pos = this.positions[inst.sym];
+  if (!pos) return null;
+
+  // Record per-strategy performance for weight learning. The strategy
+  // string is "x + y + z" so we split and record each.
+  const dir = pos.side === 'BUY' ? 1 : -1;
+  const pl = (price - pos.entry) * pos.qty * dir;
+  const win = pl > 0;
+  if (typeof pos.strategy === 'string') {
+    pos.strategy.split('+').map(s => s.trim()).forEach(s => this._recordStrategyResult(s, win));
+  }
+
+  return _v4origClose.call(this, inst, price, kind, reason);
+};
+
+// Patch step to call pyramiding alongside management.
+const _v4origStep = AlgoBot.prototype.step;
+AlgoBot.prototype.step = function (universe, ctx = {}) {
+  const events = _v4origStep.call(this, universe, ctx);
+  // Pyramid existing winners (in addition to whatever happened this tick)
+  for (const inst of universe) {
+    const ev = this._tryPyramid(inst);
+    if (ev) events.push(ev);
+  }
+  return events;
+};
+
+// Use weighted strategy votes inside the master vote loop. We do this
+// by post-processing the event reason — the simplest hook is to patch
+// _open and adjust the recorded strength using the weighted average.
+const _v4origOpen = AlgoBot.prototype._open;
+AlgoBot.prototype._open = function (inst, dir, strength, votes, regime) {
+  // Re-weight votes by each strategy's learned weight
+  const reweighted = votes.map(v => ({
+    ...v,
+    weight: this._strategyWeight(v.strategy),
+  }));
+  const num = reweighted.reduce((a, v) => a + v.strength * v.weight, 0);
+  const den = reweighted.reduce((a, v) => a + v.weight, 0) || 1;
+  const adjStrength = Math.min(0.99, num / den + 0.05 * (votes.length - 1));
+  return _v4origOpen.call(this, inst, dir, adjStrength, votes, regime);
+};

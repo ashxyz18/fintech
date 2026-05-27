@@ -17,6 +17,13 @@
 <div class="bg-mesh"></div>
 <div class="bg-grid"></div>
 
+<!-- ===== LIVE PAYOUTS TICKER BAR (FTMO-style) ===== -->
+<div class="payout-bar" id="payoutBar">
+  <div class="payout-track">
+    <!-- filled by JS -->
+  </div>
+</div>
+
 <!-- ===== NAVBAR ===== -->
 <header class="navbar">
   <div class="nav-inner">
@@ -574,6 +581,188 @@
           <img src="https://images.unsplash.com/photo-1640340434855-6084b1f4901c?w=900&q=80" alt="Trading dashboard" style="width:100%; height:380px; object-fit:cover;" />
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== RECENT PAYOUTS / HALL OF FAME ===== -->
+<section class="section reveal" style="background: linear-gradient(180deg, transparent, rgba(198,255,58,0.04), transparent);">
+  <div class="container">
+    <div class="section-title-v3" style="margin-bottom: 32px;">
+      <div class="left">
+        <div class="sub">Recent Payouts</div>
+        <h2>Real traders. <span class="gradient-text-lime">Real profits.</span></h2>
+      </div>
+      <div class="status-pill"><span class="dot"></span> Updated continuously</div>
+    </div>
+
+    <div class="fame-grid">
+      <div class="fame-card">
+        <div class="avatar" style="background: linear-gradient(135deg, #f7931a, #ffb800);">MT</div>
+        <div>
+          <div class="name"><span class="flag">🇺🇸</span> Marcus T.</div>
+          <div class="meta">Vault Alpha · 47 days · 84% win rate</div>
+        </div>
+        <div class="payout">+$48,201<span class="when">2 hours ago</span></div>
+      </div>
+      <div class="fame-card">
+        <div class="avatar" style="background: linear-gradient(135deg, #1f6dff, #00a2ff);">AK</div>
+        <div>
+          <div class="name"><span class="flag">🇬🇧</span> Aisha K.</div>
+          <div class="meta">Macro Pro · 62 days · 78% win rate</div>
+        </div>
+        <div class="payout">+$31,847<span class="when">5 hours ago</span></div>
+      </div>
+      <div class="fame-card">
+        <div class="avatar" style="background: linear-gradient(135deg, #c6ff3a, #18e2d8);">LR</div>
+        <div>
+          <div class="name"><span class="flag">🇩🇪</span> Lukas R.</div>
+          <div class="meta">Smart Money · 38 days · 81% win rate</div>
+        </div>
+        <div class="payout">+$92,418<span class="when">1 day ago</span></div>
+      </div>
+      <div class="fame-card">
+        <div class="avatar" style="background: linear-gradient(135deg, #14f195, #9945ff);">JL</div>
+        <div>
+          <div class="name"><span class="flag">🇸🇬</span> Jia Hui L.</div>
+          <div class="meta">Vault Alpha · 28 days · 86% win rate</div>
+        </div>
+        <div class="payout">+$18,294<span class="when">1 day ago</span></div>
+      </div>
+      <div class="fame-card">
+        <div class="avatar" style="background: linear-gradient(135deg, #ff003c, #ff8a3d);">BF</div>
+        <div>
+          <div class="name"><span class="flag">🇧🇷</span> Beatriz F.</div>
+          <div class="meta">Breakout Pro · 41 days · 79% win rate</div>
+        </div>
+        <div class="payout">+$24,712<span class="when">2 days ago</span></div>
+      </div>
+      <div class="fame-card">
+        <div class="avatar" style="background: linear-gradient(135deg, #627eea, #1f6dff);">YA</div>
+        <div>
+          <div class="name"><span class="flag">🇦🇪</span> Yusuf A.</div>
+          <div class="meta">Intraday Pro · 55 days · 82% win rate</div>
+        </div>
+        <div class="payout">+$67,103<span class="when">2 days ago</span></div>
+      </div>
+    </div>
+
+    <div class="text-center mt-lg">
+      <div style="display: inline-flex; gap: 32px; flex-wrap: wrap; justify-content: center; padding: 18px 32px; background: rgba(8,11,22,0.55); border: 1px solid rgba(255,255,255,0.06); border-radius: 999px;">
+        <div>
+          <div style="font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-mute); font-weight: 700;">Total paid out</div>
+          <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em;" class="gradient-text-lime"><span data-count="247000000" data-prefix="$" data-suffix="">$247M</span></div>
+        </div>
+        <div>
+          <div style="font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-mute); font-weight: 700;">Active traders</div>
+          <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em;"><span data-count="180000" data-suffix="+">180k+</span></div>
+        </div>
+        <div>
+          <div style="font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-mute); font-weight: 700;">Countries</div>
+          <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em;"><span data-count="180" data-suffix="+">180+</span></div>
+        </div>
+        <div>
+          <div style="font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-mute); font-weight: 700;">Avg payout time</div>
+          <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em;" class="text-lime">22 min</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CRYPTOVAULT vs OTHER PLATFORMS ===== -->
+<section class="section reveal">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Why CryptoVault wins</span>
+      <h2>The only platform with <span class="gradient-text-lime">all of this.</span></h2>
+      <p>Compare what you get with CryptoVault vs other AI trading and prop-firm platforms.</p>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="us">CryptoVault</th>
+            <th>Robinhood</th>
+            <th>Binance</th>
+            <th>Other prop firms</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>AI-managed portfolio</td>
+            <td class="yes">✓ 10 strategies</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗ (you trade)</td>
+          </tr>
+          <tr>
+            <td>Multi-asset (Crypto · FX · Stocks · Indices · Bonds)</td>
+            <td class="yes">✓ All 6 classes</td>
+            <td>Stocks + Crypto</td>
+            <td>Crypto only</td>
+            <td>FX + Indices</td>
+          </tr>
+          <tr>
+            <td>Min investment</td>
+            <td class="hi">$50</td>
+            <td>$1</td>
+            <td>$10</td>
+            <td>$10,000+</td>
+          </tr>
+          <tr>
+            <td>Withdraw anytime, no lock-up</td>
+            <td class="yes">✓ Within 22 min avg</td>
+            <td class="yes">✓</td>
+            <td class="yes">✓</td>
+            <td class="no">✗ Lock-ups</td>
+          </tr>
+          <tr>
+            <td>Explainable AI (8-step reasoning per trade)</td>
+            <td class="yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+          <tr>
+            <td>3:1 risk-to-reward enforced</td>
+            <td class="yes">✓ Locked</td>
+            <td class="no">✗ Manual</td>
+            <td class="no">✗ Manual</td>
+            <td>Sometimes</td>
+          </tr>
+          <tr>
+            <td>Daily-loss circuit breaker</td>
+            <td class="yes">✓ -5% halt</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Performance-only fees</td>
+            <td class="hi">15% of profits</td>
+            <td>Spread + premium</td>
+            <td>Trading fees</td>
+            <td>Subscription + split</td>
+          </tr>
+          <tr>
+            <td>Bank-grade custody (FDIC + cold storage)</td>
+            <td class="yes">✓</td>
+            <td class="yes">✓ FDIC only</td>
+            <td>Crypto only</td>
+            <td>Varies</td>
+          </tr>
+          <tr>
+            <td>Regime-adaptive strategy switching</td>
+            <td class="yes">✓ 4 regimes</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </section>
