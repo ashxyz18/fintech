@@ -1,0 +1,97 @@
+/* React-only additions on top of the shared style.css.
+   Strictly additive — nothing here overrides existing rules. */
+
+/* Animated backdrop blobs */
+.cv-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.cv-backdrop-blob {
+  position: absolute;
+  width: 540px;
+  height: 540px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.45;
+  will-change: transform;
+}
+.cv-blob-red {
+  background: radial-gradient(circle, rgba(255, 0, 60, 0.45), transparent 70%);
+  top: -120px; left: -160px;
+  animation: cvDriftA 22s ease-in-out infinite alternate;
+}
+.cv-blob-blue {
+  background: radial-gradient(circle, rgba(0, 162, 255, 0.5), transparent 70%);
+  bottom: -160px; right: -160px;
+  animation: cvDriftB 26s ease-in-out infinite alternate;
+}
+@keyframes cvDriftA {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(180px, 80px) scale(1.15); }
+}
+@keyframes cvDriftB {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-160px, -120px) scale(1.1); }
+}
+
+/* Toast stack (bottom-right) */
+.toast-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast-stack .toast {
+  position: static;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  color: var(--text);
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-blue);
+  font-size: 0.92rem;
+  animation: cvToastIn 0.22s ease;
+}
+.toast-stack .toast.error { border-color: rgba(255, 0, 60, 0.35); box-shadow: var(--shadow-red); }
+.toast-stack .toast.success i { color: var(--green); }
+.toast-stack .toast.error i { color: var(--red); }
+.toast-stack .toast.info i { color: var(--blue-glow); }
+@keyframes cvToastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* React-router NavLink active state convenience */
+.nav-links a.active,
+.sidebar nav a.active { color: var(--text); }
+
+
+
+/* Auth pages (Login / Signup) */
+.auth-page {
+  min-height: calc(100vh - 80px);
+  display: grid;
+  place-items: center;
+  padding: 60px 24px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 36px;
+}
+.auth-card .form-group { margin-bottom: 16px; }
+.text-center { text-align: center; }
+
+/* Generic page wrapper used by the in-app stub pages */
+.app-section { padding-bottom: 40px; }
