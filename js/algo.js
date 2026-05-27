@@ -928,3 +928,407 @@ function tuneBot(baseName = 'Vault Alpha') {
   }
   return best;
 }
+
+
+
+/* ================================================================
+   v3 · ALGO ENHANCEMENTS
+   - New indicators: Stochastic Oscillator, Ichimoku Cloud
+   - New strategies:
+       * Fair Value Gap (FVG) — SMC imbalance
+       * Break of Structure (BOS) / Change of Character (CHOCH)
+       * RSI bullish/bearish divergence
+       * Stochastic crossover in trend
+       * Ichimoku cloud breakout
+   - Volatility-adjusted SL/TP via ATR
+   - Drawdown-aware risk scaling (reduces size after losing streak)
+   - Multi-timeframe (HTF) confirmation
+   - Correlation filter — avoids stacking same-direction risk on
+     correlated symbols (e.g. BTC + ETH both long)
+   - Kelly-lite position sizing
+   ================================================================ */
+
+/* =============== EXTRA INDICATORS =============== */
+Object.assign(Indicators, {
+  // Stochastic oscillator (%K / %D) — close-only proxy
+  stochastic(arr, p = 14, smoothK = 3, smoothD = 3) {
+    if (arr.length < p + smoothK + smoothD) return null;
+    const ks = [];
+    for (let i = p - 1; i < arr.length; i++) {
+      const slice = arr.slice(i - p + 1, i + 1);
+      const lo = Math.min(...slice);
+      const hi = Math.max(...slice);
+      ks.push(hi - lo === 0 ? 50 : ((arr[i] - lo) / (hi - lo)) * 100);
+    }
+    const smooth = (a, n) => {
+      const out = [];
+      for (let i = n - 1; i < a.length; i++) {
+        out.push(a.slice(i - n + 1, i + 1).reduce((x, y) => x + y, 0) / n);
+      }
+      return out;
+    };
+    const kSmooth = smooth(ks, smoothK);
+    const dSmooth = smooth(kSmooth, smoothD);
+    return {
+      k: kSmooth[kSmooth.length - 1],
+      d: dSmooth[dSmooth.length - 1],
+      kPrev: kSmooth[kSmooth.length - 2],
+      dPrev: dSmooth[dSmooth.length - 2],
+    };
+  },
+
+  // Ichimoku Cloud (Tenkan/Kijun/Span A/B) — close-only approximation
+  ichimoku(arr) {
+    if (arr.length < 60) return null;
+    const hh = (n) => Math.max(...arr.slice(-n));
+    const ll = (n) => Math.min(...arr.slice(-n));
+    const tenkan = (hh(9) + ll(9)) / 2;
+    const kijun  = (hh(26) + ll(26)) / 2;
+    const senkouA = (tenkan + kijun) / 2;
+    const senkouB = (hh(52) + ll(52)) / 2;
+    return { tenkan, kijun, senkouA, senkouB, last: arr[arr.length - 1] };
+  },
+
+  // Stub for "higher timeframe" — aggregate every N closes into one bar
+  higherTF(arr, n = 5) {
+    if (arr.length < n) return arr.slice();
+    const out = [];
+    for (let i = 0; i < arr.length - n; i += n) out.push(arr[i + n - 1]);
+    return out;
+  },
+
+  // Pearson correlation between two equal-length series
+  correlation(a, b) {
+    const n = Math.min(a.length, b.length);
+    if (n < 5) return 0;
+    const ax = a.slice(-n);
+    const bx = b.slice(-n);
+    const ma = ax.reduce((x, y) => x + y, 0) / n;
+    const mb = bx.reduce((x, y) => x + y, 0) / n;
+    let num = 0, da = 0, db = 0;
+    for (let i = 0; i < n; i++) {
+      const xa = ax[i] - ma, xb = bx[i] - mb;
+      num += xa * xb; da += xa * xa; db += xb * xb;
+    }
+    const den = Math.sqrt(da * db);
+    return den === 0 ? 0 : num / den;
+  },
+});
+
+/* =============== EXTRA STRATEGIES =============== */
+Object.assign(Strategies, {
+
+  // 11. Fair Value Gap — 3-bar imbalance.
+  //   Bullish FVG: bar[i-2].high < bar[i].low. Sellers can't fill -> price
+  //   typically returns to mitigate the gap, then continues.
+  fairValueGap(prices) {
+    if (prices.length < 30) return null;
+    const last = prices[prices.length - 1];
+    // Approximate "high/low" of each bar using close+ATR neighborhood.
+    const atr = Indicators.atr(prices, 14) || 0;
+    if (!atr) return null;
+    for (let i = prices.length - 20; i < prices.length - 3; i++) {
+      const a = prices[i - 2], c = prices[i];
+      // Bullish FVG: 3 strong up bars (c >> a) with a clear gap
+      if (c - a > atr * 1.4 && c > a) {
+        const gapTop = c - atr * 0.5;
+        const gapBot = a + atr * 0.5;
+        if (gapTop > gapBot && last <= gapTop && last >= gapBot * 0.995) {
+          return { signal: 'BUY', strength: 0.83,
+            reason: `Bullish Fair Value Gap at ${gapBot.toFixed(2)}-${gapTop.toFixed(2)} mitigated — imbalance buy.` };
+        }
+      }
+      // Bearish FVG: 3 strong down bars
+      if (a - c > atr * 1.4 && c < a) {
+        const gapTop = a - atr * 0.5;
+        const gapBot = c + atr * 0.5;
+        if (gapTop > gapBot && last >= gapBot && last <= gapTop * 1.005) {
+          return { signal: 'SELL', strength: 0.81,
+            reason: `Bearish Fair Value Gap at ${gapBot.toFixed(2)}-${gapTop.toFixed(2)} mitigated — imbalance sell.` };
+        }
+      }
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'No mitigated FVG.' };
+  },
+
+  // 12. Break of Structure / Change of Character — confirms trend continuation
+  // or reversal by tracking whether price makes a higher high (bull continuation)
+  // / lower low (bear continuation) vs the opposite (CHOCH / reversal).
+  breakOfStructure(prices) {
+    if (prices.length < 60) return null;
+    const highs = findSwingHighs(prices, 60, 3);
+    const lows  = findSwingLows(prices, 60, 3);
+    if (highs.length < 2 || lows.length < 2) return null;
+    const last = prices[prices.length - 1];
+    const lastSwingHigh = highs[highs.length - 1].price;
+    const prevSwingHigh = highs[highs.length - 2].price;
+    const lastSwingLow  = lows[lows.length - 1].price;
+    const prevSwingLow  = lows[lows.length - 2].price;
+
+    // Bullish BOS: making higher highs AND price breaks last high
+    if (lastSwingHigh > prevSwingHigh && lastSwingLow > prevSwingLow && last > lastSwingHigh * 1.001) {
+      return { signal: 'BUY', strength: 0.86,
+        reason: `Bullish Break of Structure — HH/HL confirmed, broke ${lastSwingHigh.toFixed(2)}.` };
+    }
+    // Bearish BOS
+    if (lastSwingHigh < prevSwingHigh && lastSwingLow < prevSwingLow && last < lastSwingLow * 0.999) {
+      return { signal: 'SELL', strength: 0.85,
+        reason: `Bearish Break of Structure — LH/LL confirmed, broke ${lastSwingLow.toFixed(2)}.` };
+    }
+    // Bullish CHOCH (downtrend → potential reversal): was making lower highs/lows but breaks last lower-high
+    if (lastSwingHigh < prevSwingHigh && last > prevSwingHigh * 1.001) {
+      return { signal: 'BUY', strength: 0.78,
+        reason: `Bullish Change of Character — downtrend reversed by break of ${prevSwingHigh.toFixed(2)}.` };
+    }
+    if (lastSwingLow > prevSwingLow && last < prevSwingLow * 0.999) {
+      return { signal: 'SELL', strength: 0.78,
+        reason: `Bearish Change of Character — uptrend reversed by break of ${prevSwingLow.toFixed(2)}.` };
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'No BOS/CHOCH yet.' };
+  },
+
+  // 13. RSI Divergence — price makes a new low/high but RSI does not.
+  rsiDivergence(prices) {
+    if (prices.length < 60) return null;
+    const lows  = findSwingLows(prices, 60, 3);
+    const highs = findSwingHighs(prices, 60, 3);
+    const rsiAt = (idx) => {
+      const slice = prices.slice(0, idx + 1);
+      return Indicators.rsi(slice, 14);
+    };
+
+    // Bullish divergence: price LL but RSI HL
+    if (lows.length >= 2) {
+      const a = lows[lows.length - 2], b = lows[lows.length - 1];
+      const rsiA = rsiAt(a.idx), rsiB = rsiAt(b.idx);
+      if (rsiA != null && rsiB != null && b.price < a.price && rsiB > rsiA && rsiB < 45) {
+        return { signal: 'BUY', strength: 0.84,
+          reason: `Bullish RSI divergence — price LL at ${b.price.toFixed(2)} but RSI made HL (${rsiA.toFixed(0)}→${rsiB.toFixed(0)}).` };
+      }
+    }
+    // Bearish divergence: price HH but RSI LH
+    if (highs.length >= 2) {
+      const a = highs[highs.length - 2], b = highs[highs.length - 1];
+      const rsiA = rsiAt(a.idx), rsiB = rsiAt(b.idx);
+      if (rsiA != null && rsiB != null && b.price > a.price && rsiB < rsiA && rsiB > 55) {
+        return { signal: 'SELL', strength: 0.83,
+          reason: `Bearish RSI divergence — price HH at ${b.price.toFixed(2)} but RSI made LH (${rsiA.toFixed(0)}→${rsiB.toFixed(0)}).` };
+      }
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'No divergence.' };
+  },
+
+  // 14. Stochastic crossover in trend — %K crosses %D from oversold/overbought
+  stochasticCross(prices) {
+    if (prices.length < 60) return null;
+    const stoch = Indicators.stochastic(prices, 14, 3, 3);
+    const ema50 = Indicators.ema(prices, 50);
+    if (!stoch || !ema50) return null;
+    const last = prices[prices.length - 1];
+    const inUptrend = last > ema50;
+    const bullCross = stoch.kPrev <= stoch.dPrev && stoch.k > stoch.d;
+    const bearCross = stoch.kPrev >= stoch.dPrev && stoch.k < stoch.d;
+
+    if (bullCross && stoch.k < 35 && inUptrend) {
+      return { signal: 'BUY', strength: 0.78,
+        reason: `Stochastic %K crossed %D up from oversold (${stoch.k.toFixed(0)}) inside uptrend.` };
+    }
+    if (bearCross && stoch.k > 65 && !inUptrend) {
+      return { signal: 'SELL', strength: 0.77,
+        reason: `Stochastic %K crossed %D down from overbought (${stoch.k.toFixed(0)}) inside downtrend.` };
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'Stoch not at extreme cross.' };
+  },
+
+  // 15. Ichimoku breakout — price closes above/below the cloud
+  ichimokuBreak(prices) {
+    if (prices.length < 60) return null;
+    const ic = Indicators.ichimoku(prices);
+    if (!ic) return null;
+    const cloudTop = Math.max(ic.senkouA, ic.senkouB);
+    const cloudBot = Math.min(ic.senkouA, ic.senkouB);
+    if (ic.last > cloudTop && ic.tenkan > ic.kijun) {
+      return { signal: 'BUY', strength: 0.82,
+        reason: `Ichimoku bullish — price above cloud (${cloudTop.toFixed(2)}), Tenkan>Kijun.` };
+    }
+    if (ic.last < cloudBot && ic.tenkan < ic.kijun) {
+      return { signal: 'SELL', strength: 0.81,
+        reason: `Ichimoku bearish — price below cloud (${cloudBot.toFixed(2)}), Tenkan<Kijun.` };
+    }
+    return { signal: 'HOLD', strength: 0, reason: 'Inside Ichimoku cloud.' };
+  },
+});
+
+/* =============== HTF / CORRELATION HELPERS =============== */
+
+// Returns 'BUY' | 'SELL' | 'NEUTRAL' for a higher-timeframe view of the series.
+function htfBias(prices) {
+  const htf = Indicators.higherTF(prices, 5);
+  if (htf.length < 30) return 'NEUTRAL';
+  const ema20 = Indicators.ema(htf, 20);
+  const ema50 = Indicators.ema(htf, 50);
+  if (!ema20 || !ema50) return 'NEUTRAL';
+  const adx = Indicators.adx(htf, 14) || 0;
+  if (adx < 18) return 'NEUTRAL';
+  if (ema20 > ema50) return 'BUY';
+  if (ema20 < ema50) return 'SELL';
+  return 'NEUTRAL';
+}
+
+// Asset-class correlation matrix (rough, for the demo)
+const CORRELATION_GROUPS = {
+  cryptoMajors: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOT', 'AVAX', 'LINK', 'DOGE',
+                 'BTC-PERP', 'ETH-PERP', 'SOL-PERP'],
+  usdLong:      ['USDJPY', 'USDCAD', 'USDCHF'],
+  usdShort:     ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD'],
+  usEquities:   ['AAPL', 'TSLA', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'JPM', 'V',
+                 'SPX', 'NDX', 'DJI', 'ES', 'NQ', 'YM'],
+  bondsYields:  ['US10Y', 'US30Y', 'US2Y', 'DE10Y', 'UK10Y', 'JP10Y'],
+};
+function correlationGroup(sym) {
+  for (const [g, list] of Object.entries(CORRELATION_GROUPS)) {
+    if (list.includes(sym)) return g;
+  }
+  return null;
+}
+
+/* =============== ENHANCED ALGO LOGIC =============== */
+
+// Volatility-adjusted SL/TP based on ATR.
+// Returns { stopLossPct, takeProfitPct } around the desired R:R target.
+AlgoBot.prototype._volAdjustedRisk = function (prices, baseSL, baseTP) {
+  const atr = Indicators.atr(prices, 14);
+  const last = prices[prices.length - 1];
+  if (!atr || !last) return { stopLossPct: baseSL, takeProfitPct: baseTP };
+  const atrPct = atr / last;
+  // Tighter SL when vol is low, wider when vol is high. Bound to avoid extremes.
+  const sl = Math.max(0.005, Math.min(0.025, atrPct * 1.5));
+  const rr = baseTP / baseSL || 3;
+  return { stopLossPct: sl, takeProfitPct: sl * rr };
+};
+
+// Drawdown-aware risk scaling. After a losing streak shrinks size; after wins
+// allows it back up to the base. Returns a multiplier in [0.4, 1.0].
+AlgoBot.prototype._riskMultiplier = function () {
+  // Look at the last 5 closed trades
+  const last5 = this.closedTrades.slice(0, 5);
+  if (last5.length < 3) return 1;
+  const lossesInRow = last5.findIndex(t => t.pl > 0);
+  // -2 trades = 0.7x, -3 = 0.55x, -4+ = 0.4x
+  if (lossesInRow === -1)         return 0.4;            // no win in last 5
+  if (lossesInRow >= 4)           return 0.45;
+  if (lossesInRow === 3)          return 0.55;
+  if (lossesInRow === 2)          return 0.7;
+  if (lossesInRow === 1)          return 0.85;
+  return 1;
+};
+
+// Returns true if the bot should reject a new trade because it would stack
+// risk in the same direction on an already-correlated open position.
+AlgoBot.prototype._correlationConflict = function (sym, dir) {
+  const g = correlationGroup(sym);
+  if (!g) return false;
+  for (const p of Object.values(this.positions)) {
+    if (p.sym === sym) continue;
+    if (correlationGroup(p.sym) === g && p.side === dir) return true;
+  }
+  return false;
+};
+
+// Wrap the existing _open so it consumes the volatility-adjusted SL/TP and
+// scales the position by the current risk multiplier. We do this by patching
+// _open via a wrapper rather than rewriting it (keeps the original logic).
+const _origOpen = AlgoBot.prototype._open;
+AlgoBot.prototype._open = function (inst, dir, strength, votes, regime) {
+  const prices = this.history[inst.sym] || [];
+  if (prices.length >= 30) {
+    const vol = this._volAdjustedRisk(prices, this.cfg.stopLossPct, this.cfg.takeProfitPct);
+    this.cfg.stopLossPct = vol.stopLossPct;
+    this.cfg.takeProfitPct = vol.takeProfitPct;
+    this.cfg.trailingActivatePct = vol.stopLossPct * 2;
+    this.cfg.trailingStopPct = vol.stopLossPct * 0.8;
+  }
+  // Drawdown-aware sizing
+  const baseRisk = this._baseRiskPerTrade ?? this.cfg.riskPerTrade;
+  this._baseRiskPerTrade = baseRisk;
+  this.cfg.riskPerTrade = +(baseRisk * this._riskMultiplier()).toFixed(4);
+
+  return _origOpen.call(this, inst, dir, strength, votes, regime);
+};
+
+// Add HTF + correlation gates to MasterAI._maybeOpen by post-filtering.
+const _origMaybeOpen = MasterAI.prototype._maybeOpen;
+MasterAI.prototype._maybeOpen = function (inst) {
+  if (this.positions[inst.sym]) return null;
+  const prices = this.history[inst.sym];
+  if (!prices || prices.length < 60) return _origMaybeOpen.call(this, inst);
+
+  // We need to know what direction the original logic *would* take. Easiest:
+  // call the original, and if it opened a trade, validate it post-hoc and
+  // close it immediately if the gates fail.
+  const ev = _origMaybeOpen.call(this, inst);
+  if (!ev || !(ev.action === 'OPEN_LONG' || ev.action === 'OPEN_SHORT')) return ev;
+
+  const dir = ev.action === 'OPEN_LONG' ? 'BUY' : 'SELL';
+
+  // Higher-timeframe bias gate
+  const htf = htfBias(prices);
+  if (htf !== 'NEUTRAL' && htf !== dir) {
+    // Roll back: close the just-opened position with no PnL impact.
+    const pos = this.positions[inst.sym];
+    if (pos) {
+      delete this.positions[inst.sym];
+      // Remove the open log entry we just added.
+      const i = this.log.findIndex(l => l === ev);
+      if (i >= 0) this.log.splice(i, 1);
+    }
+    this.log.unshift({
+      time: Date.now(), sym: inst.sym, asset: inst.asset || 'crypto',
+      action: 'SKIP', price: inst.price,
+      reason: `HTF bias is ${htf} — ${dir} blocked by higher-timeframe filter.`,
+    });
+    return null;
+  }
+
+  // Correlation conflict
+  if (this._correlationConflict(inst.sym, dir)) {
+    const pos = this.positions[inst.sym];
+    if (pos) {
+      delete this.positions[inst.sym];
+      const i = this.log.findIndex(l => l === ev);
+      if (i >= 0) this.log.splice(i, 1);
+    }
+    this.log.unshift({
+      time: Date.now(), sym: inst.sym, asset: inst.asset || 'crypto',
+      action: 'SKIP', price: inst.price,
+      reason: `Correlated ${dir} already open in same group — risk-stack avoided.`,
+    });
+    return null;
+  }
+
+  return ev;
+};
+
+// Expand MasterAI's strategy menu to include the new ones.
+const _origStrats = MasterAI.prototype._strategiesForRegime;
+MasterAI.prototype._strategiesForRegime = function (regime) {
+  const cfg = _origStrats.call(this, regime);
+  if (!cfg) return cfg;
+  if (regime === 'TRENDING_UP' || regime === 'TRENDING_DOWN') {
+    cfg.strategies = Array.from(new Set([
+      ...cfg.strategies,
+      'breakOfStructure', 'fairValueGap', 'ichimokuBreak', 'stochasticCross',
+    ]));
+  } else if (regime === 'RANGING') {
+    cfg.strategies = Array.from(new Set([
+      ...cfg.strategies,
+      'rsiDivergence', 'fairValueGap', 'stochasticCross',
+    ]));
+  } else {
+    cfg.strategies = Array.from(new Set([
+      ...cfg.strategies,
+      'breakOfStructure', 'ichimokuBreak',
+    ]));
+  }
+  return cfg;
+};

@@ -11,6 +11,9 @@
 </head>
 <body>
 
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+
 <div class="app-layout">
 
   <!-- ===== SIDEBAR ===== -->
@@ -54,6 +57,103 @@
       <div class="flex gap-sm">
         <button class="btn btn-ghost" onclick="openTransferModal()"><i class="fa-solid fa-right-left"></i> Transfer</button>
         <a href="deposit.html" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Deposit</a>
+      </div>
+    </div>
+
+    <!-- ===== LIVE METRIX PANEL (FTMO-style) ===== -->
+    <div class="metrix-panel">
+      <div class="metrix-head">
+        <h3>LIVE METRIX · APP SUITE<strong>Vault AI · Standard account</strong></h3>
+        <div class="flex gap-sm" style="flex-wrap:wrap;">
+          <span class="status-pill" id="metrixBotPill"><span class="dot"></span> Bot active</span>
+          <span class="status-pill warn" id="metrixOpenPill"><span class="dot"></span> <span id="metrixOpen">0</span> open</span>
+        </div>
+      </div>
+
+      <div class="metrix-grid">
+        <div class="metrix-cell">
+          <div class="ring ring-lime ring-lg" id="ringWin" style="--p:84;" data-label="84%"></div>
+          <div class="info">
+            <div class="lbl">Win rate</div>
+            <div class="val" id="mxWinRate">84%</div>
+            <div class="sub">last 100 trades</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-teal ring-lg" id="ringPF" style="--p:73;" data-label="3.14"></div>
+          <div class="info">
+            <div class="lbl">Profit factor</div>
+            <div class="val" id="mxPF">3.14</div>
+            <div class="sub">gross / loss</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-blue ring-lg" id="ringSharpe" style="--p:67;" data-label="2.71"></div>
+          <div class="info">
+            <div class="lbl">Sharpe ratio</div>
+            <div class="val" id="mxSharpe">2.71</div>
+            <div class="sub">risk-adjusted</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-red ring-lg" id="ringDD" style="--p:22;" data-label="-4.2%"></div>
+          <div class="info">
+            <div class="lbl">Max drawdown</div>
+            <div class="val text-red" id="mxDD">-4.2%</div>
+            <div class="sub">since inception</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-gold ring-lg" id="ringDays" style="--p:62;" data-label="62"></div>
+          <div class="info">
+            <div class="lbl">Trading days</div>
+            <div class="val" id="mxDays">62 / 100</div>
+            <div class="sub">current cycle</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-green ring-lg" id="ringROI" style="--p:91;" data-label="+18%"></div>
+          <div class="info">
+            <div class="lbl">30-day return</div>
+            <div class="val text-green" id="mxROI">+18.4%</div>
+            <div class="sub">target +10%</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.06);">
+        <div class="target-row">
+          <div class="label-block">
+            <div class="lbl">Profit target</div>
+            <div class="sub">+10% of starting equity · 30 days</div>
+          </div>
+          <div class="target-bar"><span id="barProfit" style="width:0%;"></span></div>
+          <div class="target-value text-lime" id="valProfit">+$0<span class="of">of $0</span></div>
+        </div>
+        <div class="target-row">
+          <div class="label-block">
+            <div class="lbl">Daily loss limit</div>
+            <div class="sub">-5% · resets midnight UTC</div>
+          </div>
+          <div class="target-bar bar-red"><span id="barDaily" style="width:18%;"></span></div>
+          <div class="target-value text-red" id="valDaily">-$0<span class="of">of -$0</span></div>
+        </div>
+        <div class="target-row">
+          <div class="label-block">
+            <div class="lbl">Max drawdown</div>
+            <div class="sub">-10% trailing · all-time</div>
+          </div>
+          <div class="target-bar bar-gold"><span id="barDD" style="width:42%;"></span></div>
+          <div class="target-value text-red" id="valDD">-$0<span class="of">of -$0</span></div>
+        </div>
+        <div class="target-row">
+          <div class="label-block">
+            <div class="lbl">Min trading days</div>
+            <div class="sub">10 days minimum · payout eligibility</div>
+          </div>
+          <div class="target-bar bar-blue"><span id="barDays" style="width:100%;"></span></div>
+          <div class="target-value text-lime" id="valDays">62<span class="of">of 10 ✓</span></div>
+        </div>
       </div>
     </div>
 

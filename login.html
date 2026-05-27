@@ -10,6 +10,9 @@
 </head>
 <body>
 
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+
 <div class="auth-page">
 
   <div class="auth-visual">
@@ -17,8 +20,23 @@
       <source src="https://cdn.pixabay.com/video/2022/12/11/142269-781680956_large.mp4" type="video/mp4" />
     </video>
     <div class="quote">
+      <div class="eyebrow-v3" style="margin-bottom:24px;"><span class="dot"></span> Live MetriX · App Suite</div>
       <h2>Welcome back, trader.</h2>
-      <p>Your AI bots have been working while you were away.</p>
+      <p style="margin-bottom: 24px;">Your AI bots have been working while you were away.</p>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="background:rgba(8,11,22,0.55); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:14px 18px;">
+          <div style="font-size:0.7rem; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.6); font-weight:700;">30-day P&amp;L</div>
+          <div style="font-size:1.5rem; font-weight:800; color:var(--lime); margin-top:4px;">+$12,847</div>
+        </div>
+        <div style="background:rgba(8,11,22,0.55); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:14px 18px;">
+          <div style="font-size:0.7rem; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.6); font-weight:700;">Trades today</div>
+          <div style="font-size:1.5rem; font-weight:800; color:#fff; margin-top:4px;">14</div>
+        </div>
+        <div style="background:rgba(8,11,22,0.55); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:14px 18px;">
+          <div style="font-size:0.7rem; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.6); font-weight:700;">Win rate</div>
+          <div style="font-size:1.5rem; font-weight:800; color:var(--teal); margin-top:4px;">84%</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -52,7 +70,7 @@
           <label for="remember" style="margin:0; font-size:0.88rem;">Keep me signed in for 30 days</label>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block btn-lg">
+        <button type="submit" class="btn-lime btn-block" style="width:100%; justify-content:center; padding:15px 28px; font-size:1rem;">
           Sign in <i class="fa-solid fa-arrow-right"></i>
         </button>
       </form>
