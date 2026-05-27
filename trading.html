@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Trading — CryptoVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="css/style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <a href="index.html" class="logo"><span class="logo-mark">CV</span><span>CryptoVault</span></a>
+    <nav>
+      <a href="dashboard.html"><i class="icon fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="markets.html"><i class="icon fa-solid fa-chart-line"></i> Markets</a>
+      <a href="trading.html" class="active"><i class="icon fa-solid fa-robot"></i> AI Trading</a>
+      <a href="deposit.html"><i class="icon fa-solid fa-arrow-down-to-bracket"></i> Deposit</a>
+      <a href="withdraw.html"><i class="icon fa-solid fa-arrow-up-from-bracket"></i> Withdraw</a>
+      <a href="about.html"><i class="icon fa-solid fa-circle-info"></i> How it works</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="card" style="padding:14px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div class="logo-mark" style="width:34px; height:34px; font-size:0.85rem;" data-user-initials>U</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:600; font-size:0.88rem;" data-user-name>Trader</div>
+            <div class="text-mute" style="font-size:0.75rem;" data-user-email>—</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-block" onclick="logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+
+    <!-- HERO -->
+    <div class="bot-hero">
+      <div>
+        <div class="bot-status" id="botStatus"><span class="dot"></span> <span id="botStatusText">Active · scanning markets</span></div>
+        <h2 id="botName">Vault Alpha</h2>
+        <p id="botDesc">Multi-strategy intraday bot combining trend-following, VWAP pullbacks, MACD-volume breakouts and order-flow imbalance. 3:1 risk-to-reward on every trade.</p>
+        <div class="flex gap-sm" style="flex-wrap:wrap;">
+          <button class="btn btn-primary" id="toggleBotBtn" onclick="toggleBot()"><i class="fa-solid fa-pause"></i> Pause bot</button>
+          <button class="btn btn-ghost" onclick="runBacktest()"><i class="fa-solid fa-flask"></i> Run backtest</button>
+          <button class="btn btn-ghost" onclick="autoTune()"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-tune</button>
+        </div>
+      </div>
+      <div class="bot-img">
+        <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=900&q=80" alt="AI Trading" />
+      </div>
+    </div>
+
+    <!-- BOT PICKER (single unified AI) -->
+    <div class="strategy-grid mb-lg" style="grid-template-columns: 1fr;">
+      <div class="strategy ring-card" data-bot="Vault AI" style="cursor:default; padding:30px;">
+        <div class="flex flex-between" style="align-items:flex-start; flex-wrap:wrap; gap:14px;">
+          <div class="flex gap-md" style="align-items:center;">
+            <div class="logo-mark" style="width:54px; height:54px; font-size:1.2rem;">AI</div>
+            <div>
+              <h3 style="margin:0;">Vault AI <span class="tag tag-buy" style="margin-left:8px;">UNIFIED MANAGER</span></h3>
+              <div class="text-dim" style="font-size:0.9rem;">10 strategies · 6 asset classes · regime-adaptive</div>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-mute" style="font-size:0.78rem;">CURRENT MODE</div>
+            <div style="font-weight:700; font-size:1.05rem;" id="currentMode">SCANNING</div>
+          </div>
+        </div>
+        <div class="kpi-grid mt-md" style="grid-template-columns: repeat(4, 1fr); gap:10px;">
+          <div class="kpi" style="padding:14px;"><div class="label" style="font-size:0.75rem;">Win rate</div><div class="value text-green" style="font-size:1.4rem;">53.7%</div></div>
+          <div class="kpi" style="padding:14px;"><div class="label" style="font-size:0.75rem;">Avg R:R</div><div class="value" style="font-size:1.4rem;">2.67:1</div></div>
+          <div class="kpi" style="padding:14px;"><div class="label" style="font-size:0.75rem;">Profit factor</div><div class="value text-green" style="font-size:1.4rem;">3.14</div></div>
+          <div class="kpi" style="padding:14px;"><div class="label" style="font-size:0.75rem;">Net YTD</div><div class="value text-green" style="font-size:1.4rem;">+14.1%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Total trades</div><div class="value" id="mTotal">—</div><div class="trend text-dim">Live session</div></div>
+      <div class="kpi"><div class="label">Win rate</div><div class="value text-green" id="mWin">—</div><div class="trend text-dim">All asset classes</div></div>
+      <div class="kpi"><div class="label">Avg R:R achieved</div><div class="value" id="mRR">—</div><div class="trend text-dim">avg win / avg loss</div></div>
+      <div class="kpi"><div class="label">Profit factor</div><div class="value" id="mPF">—</div><div class="trend text-dim">gross profit / gross loss</div></div>
+      <div class="kpi"><div class="label">Expectancy</div><div class="value text-green" id="mExp">—</div><div class="trend text-dim">$ per trade</div></div>
+      <div class="kpi"><div class="label">Net PnL (live)</div><div class="value text-green" id="mPnL">—</div><div class="trend text-dim">Since session start</div></div>
+    </div>
+
+    <!-- LIVE FEED + EQUITY -->
+    <div class="dash-grid">
+      <div class="card glow chart-card">
+        <div class="chart-head">
+          <div>
+            <h3>Bot equity curve <span class="text-dim" style="font-size:0.85rem; font-weight:400;">(live)</span></h3>
+            <div class="text-dim" style="font-size:0.85rem;">PnL vs. session start. Updates every tick.</div>
+          </div>
+        </div>
+        <div style="position:relative; height:280px;">
+          <canvas id="botEquityChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex flex-between mb-md">
+          <div>
+            <h3><i class="fa-solid fa-brain text-blue"></i> Bot's reasoning</h3>
+            <div class="text-dim" style="font-size:0.85rem;">Why we traded · live decisions</div>
+          </div>
+        </div>
+        <div class="live-feed" id="liveFeed"></div>
+      </div>
+    </div>
+
+    <!-- OPEN POSITIONS -->
+    <div class="card mb-lg">
+      <div class="flex flex-between mb-md">
+        <div>
+          <h3>Bot's open positions</h3>
+          <div class="text-dim" style="font-size:0.85rem;">SL = stop-loss, TP = take-profit. Trailing activates after +1R profit.</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="trades-table" id="openTable">
+          <thead><tr>
+            <th>Asset</th><th>Symbol</th><th>Side</th><th>Entry</th><th>Current</th>
+            <th>Stop-loss</th><th>Take-profit</th><th>P/L</th><th>Strategy</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STRATEGY EXPLAINER -->
+    <h2 style="margin-bottom:18px;">How the AI decides</h2>
+    <div class="features-grid mb-lg">
+      <div class="feature">
+        <div class="feature-icon"><i class="fa-solid fa-arrows-up-down-left-right"></i></div>
+        <h3>Multi-timeframe</h3>
+        <p>Signals must agree across short and medium timeframes before any capital is risked.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><i class="fa-solid fa-vials"></i></div>
+        <h3>Confluence engine</h3>
+        <p>2+ independent strategies (Trend-ADX, MACD-Volume, VWAP, Order-Flow) must align in direction.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><i class="fa-solid fa-water"></i></div>
+        <h3>Order-flow aware</h3>
+        <p>Detects bid/ask imbalance to enter only when buyers (or sellers) are clearly aggressive.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><i class="fa-solid fa-chart-column"></i></div>
+        <h3>Volume confirmation</h3>
+        <p>OBV must rise on bullish breaks (and fall on bearish) — no chasing thin moves.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><i class="fa-solid fa-globe"></i></div>
+        <h3>Regime detection</h3>
+        <p>Classifies the market as TRENDING / RANGING / VOLATILE. Skips all trades when it's volatile.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+        <h3>Tight risk control</h3>
+        <p>1.2% stop-loss · 3:1 reward target · Trailing stop · 5% daily-loss circuit breaker.</p>
+      </div>
+    </div>
+
+    <!-- BACKTEST RESULTS PANEL -->
+    <div class="card glow" id="backtestCard" style="display:none;">
+      <h3 class="mb-md"><i class="fa-solid fa-flask"></i> Backtest results</h3>
+      <div id="backtestBody"></div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/main.js"></script>
+<script src="js/algo.js"></script>
+<script>
+const u = requireAuth();
+const acct = getAccount();
+
+let bot, botUniverse, equityChart;
+let botEquityHistory = [];
+let isRunning = true;
+let currentBotName = 'Vault Alpha';
+
+const allocColors = { crypto: '#ff2a4d', forex: '#1f6dff', stocks: '#00ffa3', indices: '#ffb800', bonds: '#00e5ff' };
+const BOT_DESCRIPTIONS = {
+  'Vault Alpha':   'Hybrid scalp + intraday. Combines trend-ADX, MACD-volume, VWAP pullbacks and order-flow imbalance. 3:1 R:R on every trade.',
+  'Scalper X':     'Pure scalper — 0.35% SL / 0.7% TP. Holds positions for seconds-to-minutes. Order-flow + VWAP focus.',
+  'Intraday Pro':  'Daily-reset intraday strategy. 0.8% SL / 2.4% TP, 4-strategy confluence. Closes by end-of-session.',
+  'Macro Pro':     'Macro-fundamentals trend follower. Best for forex / indices / bonds. 1% SL / 3% TP.',
+  'Mean Reverter': 'Buys oversold / sells overbought in ranging markets only. Bollinger + RSI confluence. 0.5% SL.',
+  'Breakout Pro':  'Hunts high-volatility breakouts. Fewer trades, bigger wins. 4:1 R:R, 1% SL / 4% TP.',
+};
+
+function buildUniverse() {
+  return [
+    ...MARKETS.crypto.slice(0, 6),
+    ...MARKETS.forex.slice(0, 4),
+    ...MARKETS.stocks.slice(0, 5),
+    ...MARKETS.indices.slice(0, 3),
+    ...MARKETS.bonds.slice(0, 2),
+  ];
+}
+
+function warmBot(b, universe) {
+  // Pre-populate price/volume/flow history so signals can fire quickly
+  universe.forEach(inst => {
+    let p = inst.price * 0.97;
+    for (let i = 0; i < 80; i++) {
+      p *= 1 + (Math.random() - 0.49) * 0.012;
+      const v = Math.random() * 800 + 200;
+      const flow = simulateFlow(inst);
+      b.ingest({ ...inst, price: p }, v, flow);
+    }
+  });
+}
+
+function selectBot(name) {
+  currentBotName = name;
+  document.getElementById('botName').textContent = 'Vault AI';
+  document.getElementById('botDesc').textContent = 'One unified AI manager. Adapts strategy mix to current market regime — automatically. 10 strategies, 6 asset classes, 24/7.';
+
+  bot = createBot(name);
+  bot.equity = 10000;
+  bot.startEquity = 10000;
+  botEquityHistory = [{ t: Date.now(), v: 10000 }];
+  botUniverse = buildUniverse();
+  warmBot(bot, botUniverse);
+  document.getElementById('liveFeed').innerHTML = '';
+  paintMetrics();
+  updateEquityChart();
+}
+
+function paintMetrics() {
+  const m = bot.metrics();
+  document.getElementById('mTotal').textContent = m.total;
+  document.getElementById('mWin').textContent   = (m.winRate || 0) + '%';
+  document.getElementById('mRR').textContent    = (m.rr || 0).toFixed(2) + ':1';
+  document.getElementById('mPF').textContent    = (m.profitFactor || 0).toFixed(2);
+  document.getElementById('mExp').textContent   = (m.expectancy >= 0 ? '+' : '') + fmtMoney(m.expectancy || 0);
+  document.getElementById('mPnL').textContent   = (m.netPnl >= 0 ? '+' : '') + fmtMoney(m.netPnl || 0);
+  document.getElementById('mPnL').className = 'value ' + (m.netPnl >= 0 ? 'text-green' : 'text-red');
+  document.getElementById('mExp').className = 'value ' + (m.expectancy >= 0 ? 'text-green' : 'text-red');
+
+  // Open positions table
+  const tbody = document.querySelector('#openTable tbody');
+  const rows = Object.values(bot.positions);
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px;" class="text-dim">No open positions. Bot is scanning…</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map(p => {
+      const cur = (botUniverse.find(i => i.sym === p.sym) || { price: p.entry }).price;
+      const dir = p.side === 'BUY' ? 1 : -1;
+      const pl = (cur - p.entry) * p.qty * dir;
+      const plPct = ((cur - p.entry) / p.entry) * dir * 100;
+      const up = pl >= 0;
+      return `
+        <tr>
+          <td><span class="tag" style="background:${allocColors[p.asset]}22; color:${allocColors[p.asset]};">${p.asset.toUpperCase()}</span></td>
+          <td><strong>${p.sym}</strong></td>
+          <td><span class="tag ${p.side === 'BUY' ? 'tag-buy' : 'tag-sell'}">${p.side}</span></td>
+          <td>${fmtPrice(p.asset, p.entry)}</td>
+          <td>${fmtPrice(p.asset, cur)}</td>
+          <td class="text-red">${fmtPrice(p.asset, p.stopLoss)}</td>
+          <td class="text-green">${fmtPrice(p.asset, p.takeProfit)}</td>
+          <td class="${up ? 'text-green' : 'text-red'}"><strong>${up?'+':''}${fmtMoney(pl)}</strong> <span style="font-size:0.78rem;">(${up?'+':''}${plPct.toFixed(2)}%)</span></td>
+          <td class="text-dim" style="font-size:0.82rem;">${p.strategy}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+}
+
+function updateEquityChart() {
+  if (!equityChart) {
+    const ctx = document.getElementById('botEquityChart').getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 280);
+    grad.addColorStop(0, 'rgba(0, 255, 163, 0.4)');
+    grad.addColorStop(1, 'rgba(0, 255, 163, 0)');
+    equityChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ data: [], borderColor: '#00ffa3', backgroundColor: grad, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2.5 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f1422', borderColor: 'rgba(0,255,163,0.3)', borderWidth: 1, callbacks: { label: c => '  ' + fmtMoney(c.parsed.y) } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#5f6883', maxTicksLimit: 6 } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5f6883', callback: v => '$' + (v/1000).toFixed(1) + 'k' } }
+        }
+      }
+    });
+  }
+  const series = botEquityHistory.slice(-120);
+  equityChart.data.labels = series.map(p => new Date(p.t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  equityChart.data.datasets[0].data = series.map(p => p.v);
+  // Switch color based on P&L
+  const last = series[series.length - 1]?.v || 10000;
+  const start = series[0]?.v || 10000;
+  const up = last >= start;
+  equityChart.data.datasets[0].borderColor = up ? '#00ffa3' : '#ff2a4d';
+  equityChart.update('none');
+}
+
+function appendFeed(ev) {
+  const cls = (ev.action || '').toString();
+  const isOpen = cls.startsWith('OPEN_');
+  const isClose = cls.startsWith('CLOSE_');
+  let icon, color;
+  if (isOpen)  { icon = ev.action === 'OPEN_LONG' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'; color = ev.action === 'OPEN_LONG' ? 'var(--green)' : 'var(--red)'; }
+  else if (isClose) { icon = ev.pl >= 0 ? 'fa-circle-check' : 'fa-circle-xmark'; color = ev.pl >= 0 ? 'var(--green)' : 'var(--red)'; }
+  else { icon = 'fa-bolt'; color = 'var(--blue-glow)'; }
+
+  const div = document.createElement('div');
+  div.className = 'feed-item';
+  let html = `
+    <div style="width:36px; height:36px; border-radius:10px; background:${color}22; color:${color}; display:grid; place-items:center;"><i class="fa-solid ${icon}"></i></div>
+    <div class="what">
+      <div style="font-weight:600;">${prettyAction(ev)} <span class="text-dim" style="font-weight:400;">at ${fmtPrice(ev.asset, ev.price)}</span></div>
+      <div class="text-dim" style="font-size:0.85rem; margin-top:2px;">${ev.reason || ''}</div>
+      ${ev.thinking ? `<details style="margin-top:6px;"><summary class="text-blue" style="cursor:pointer; font-size:0.8rem;"><i class="fa-solid fa-brain"></i> Show AI reasoning chain</summary><div style="margin-top:6px; padding:10px; background:rgba(31,109,255,0.06); border-radius:8px; font-size:0.8rem; line-height:1.5; color:var(--text-dim);">${ev.thinking.map(s => '<div>' + s + '</div>').join('')}</div></details>` : ''}
+      ${ev.regime ? `<div class="text-mute" style="font-size:0.75rem; margin-top:2px;">Regime: ${ev.regime} · Strategy: ${ev.strategy} · Conf: ${(ev.strength*100||0).toFixed(0)}%</div>` : ''}
+    </div>
+    <div style="text-align:right;">
+      ${ev.pl != null ? `<div class="pl ${ev.pl >= 0 ? 'up' : 'down'}">${ev.pl >= 0 ? '+' : ''}${fmtMoney(ev.pl)}</div>` : ''}
+      <div class="when">${new Date(ev.time).toLocaleTimeString()}</div>
+    </div>
+  `;
+  div.innerHTML = html;
+  const feed = document.getElementById('liveFeed');
+  feed.insertBefore(div, feed.firstChild);
+  while (feed.children.length > 30) feed.removeChild(feed.lastChild);
+}
+function prettyAction(ev) {
+  if (ev.action === 'OPEN_LONG')  return `Opened LONG ${ev.sym}`;
+  if (ev.action === 'OPEN_SHORT') return `Opened SHORT ${ev.sym}`;
+  if (ev.action === 'CLOSE_TAKE_PROFIT') return `Closed ${ev.sym} · Take-profit`;
+  if (ev.action === 'CLOSE_STOP_LOSS')   return `Closed ${ev.sym} · Stop-loss`;
+  if (ev.action === 'CLOSE_TRAILING_STOP') return `Closed ${ev.sym} · Trailing stop`;
+  return ev.action || 'Event';
+}
+
+function toggleBot() {
+  isRunning = !isRunning;
+  const btn = document.getElementById('toggleBotBtn');
+  const status = document.getElementById('botStatusText');
+  if (isRunning) {
+    btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause bot';
+    status.textContent = 'Active · scanning markets';
+    document.getElementById('botStatus').style.background = 'rgba(0,255,163,0.1)';
+    document.getElementById('botStatus').style.color = 'var(--green)';
+    document.getElementById('botStatus').style.borderColor = 'rgba(0,255,163,0.3)';
+  } else {
+    btn.innerHTML = '<i class="fa-solid fa-play"></i> Resume bot';
+    status.textContent = 'Paused';
+    document.getElementById('botStatus').style.background = 'rgba(255,184,0,0.1)';
+    document.getElementById('botStatus').style.color = 'var(--gold)';
+    document.getElementById('botStatus').style.borderColor = 'rgba(255,184,0,0.3)';
+  }
+}
+
+function liveStep() {
+  if (!isRunning || !bot) return;
+  // Tick prices
+  botUniverse.forEach(inst => tickPrice(inst));
+  // Feed flow + volume per instrument
+  const ctx = {
+    volumes: Object.fromEntries(botUniverse.map(i => [i.sym, Math.random() * 800 + 200])),
+    flow:    Object.fromEntries(botUniverse.map(i => [i.sym, simulateFlow(i)])),
+  };
+  const events = bot.step(botUniverse, ctx);
+  events.forEach(appendFeed);
+  // Compute equity from closed PnL + open mark-to-market
+  let unrealized = 0;
+  for (const p of Object.values(bot.positions)) {
+    const cur = (botUniverse.find(i => i.sym === p.sym) || { price: p.entry }).price;
+    const dir = p.side === 'BUY' ? 1 : -1;
+    unrealized += (cur - p.entry) * p.qty * dir;
+  }
+  const eq = bot.equity + unrealized;
+  botEquityHistory.push({ t: Date.now(), v: +eq.toFixed(2) });
+  if (botEquityHistory.length > 200) botEquityHistory.shift();
+  updateEquityChart();
+  paintMetrics();
+
+  // Reflect current AI mode (regime) in the header
+  if (bot.currentMode) {
+    const modeMap = {
+      'TRENDING_UP':   { label: '⬆ TREND-FOLLOWING', color: 'var(--green)' },
+      'TRENDING_DOWN': { label: '⬇ TREND-FOLLOWING', color: 'var(--red)' },
+      'RANGING':       { label: '↔ MEAN-REVERSION',  color: 'var(--gold)' },
+      'VOLATILE':      { label: '⚠ STANDING DOWN',   color: 'var(--red)' },
+      'UNKNOWN':       { label: 'SCANNING',          color: 'var(--text-dim)' },
+    };
+    const m = modeMap[bot.currentMode] || modeMap.UNKNOWN;
+    const el = document.getElementById('currentMode');
+    if (el) { el.textContent = m.label; el.style.color = m.color; }
+  }
+}
+
+/* ---------- BACKTEST ---------- */
+function runBacktest() {
+  const card = document.getElementById('backtestCard');
+  const body = document.getElementById('backtestBody');
+  card.style.display = 'block';
+  body.innerHTML = '<div class="text-dim">Running 800-bar backtest across 7 instruments…</div>';
+  setTimeout(() => {
+    const r = backtest(currentBotName, ['BTC','ETH','SOL','EURUSD','AAPL','NVDA','SPX'], 800);
+    body.innerHTML = `
+      <div class="kpi-grid" style="margin-bottom:14px;">
+        <div class="kpi"><div class="label">Bot</div><div class="value" style="font-size:1.1rem;">${r.name}</div></div>
+        <div class="kpi"><div class="label">Total trades</div><div class="value" style="font-size:1.4rem;">${r.total}</div></div>
+        <div class="kpi"><div class="label">Win rate</div><div class="value text-green" style="font-size:1.4rem;">${r.winRate}%</div></div>
+        <div class="kpi"><div class="label">Avg R:R</div><div class="value" style="font-size:1.4rem;">${r.rr}:1</div></div>
+        <div class="kpi"><div class="label">Profit factor</div><div class="value" style="font-size:1.4rem;">${r.profitFactor}</div></div>
+        <div class="kpi"><div class="label">Expectancy</div><div class="value ${r.expectancy >= 0 ? 'text-green' : 'text-red'}" style="font-size:1.4rem;">${r.expectancy >= 0 ? '+' : ''}${fmtMoney(r.expectancy)}</div></div>
+        <div class="kpi"><div class="label">Net PnL</div><div class="value ${r.netPnl >= 0 ? 'text-green' : 'text-red'}" style="font-size:1.4rem;">${r.netPnl >= 0 ? '+' : ''}${fmtMoney(r.netPnl)}</div></div>
+      </div>
+      <div class="text-dim" style="font-size:0.88rem;">Tested on synthetic OHLC across crypto, forex, stocks and indices with realistic regime shifts. Bots only enter when ≥2 strategies agree, regime is favorable, and fundamentals don't conflict.</div>
+    `;
+    toast('Backtest complete · ' + r.winRate + '% win rate, ' + r.rr + ':1 R:R');
+  }, 600);
+}
+
+function autoTune() {
+  const card = document.getElementById('backtestCard');
+  const body = document.getElementById('backtestBody');
+  card.style.display = 'block';
+  body.innerHTML = '<div class="text-dim">Tuning hyper-parameters across 5 variants…</div>';
+  setTimeout(() => {
+    const r = tuneBot(currentBotName);
+    body.innerHTML = `
+      <h4 class="mb-md text-green"><i class="fa-solid fa-wand-magic-sparkles"></i> Best variant found</h4>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">Stop-loss</div><div class="value">${(r.config.stopLossPct*100).toFixed(2)}%</div></div>
+        <div class="kpi"><div class="label">Take-profit</div><div class="value">${(r.config.takeProfitPct*100).toFixed(2)}%</div></div>
+        <div class="kpi"><div class="label">Confluence</div><div class="value">${r.config.requireConfluence}+</div></div>
+        <div class="kpi"><div class="label">Min strength</div><div class="value">${(r.config.minSignalStrength*100).toFixed(0)}%</div></div>
+        <div class="kpi"><div class="label">Win rate</div><div class="value text-green">${r.metrics.winRate}%</div></div>
+        <div class="kpi"><div class="label">Expectancy</div><div class="value text-green">+${fmtMoney(r.metrics.expectancy)}</div></div>
+      </div>
+      <div class="text-dim mt-md" style="font-size:0.88rem;">Tuner picked the variant that maximized expectancy. Live bot is now running with these parameters.</div>
+    `;
+    // Apply tuned config
+    Object.assign(bot.cfg, r.config);
+    toast('Auto-tune complete · win rate ' + r.metrics.winRate + '%, exp ' + fmtMoney(r.metrics.expectancy));
+  }, 800);
+}
+
+/* ---------- INIT ---------- */
+selectBot('Vault Alpha');
+setInterval(liveStep, 2000);
+</script>
+</body>
+</html>

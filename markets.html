@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Markets — CryptoVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="css/style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <a href="index.html" class="logo"><span class="logo-mark">CV</span><span>CryptoVault</span></a>
+    <nav>
+      <a href="dashboard.html"><i class="icon fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="markets.html" class="active"><i class="icon fa-solid fa-chart-line"></i> Markets</a>
+      <a href="trading.html"><i class="icon fa-solid fa-robot"></i> AI Trading</a>
+      <a href="deposit.html"><i class="icon fa-solid fa-arrow-down-to-bracket"></i> Deposit</a>
+      <a href="withdraw.html"><i class="icon fa-solid fa-arrow-up-from-bracket"></i> Withdraw</a>
+      <a href="about.html"><i class="icon fa-solid fa-circle-info"></i> How it works</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="card" style="padding:14px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div class="logo-mark" style="width:34px; height:34px; font-size:0.85rem;" data-user-initials>U</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:600; font-size:0.88rem;" data-user-name>Trader</div>
+            <div class="text-mute" style="font-size:0.75rem;" data-user-email>—</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-block" onclick="logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+
+    <div class="page-head">
+      <div>
+        <h1>Markets</h1>
+        <div class="sub">Live prices across <strong>Crypto</strong>, <strong>Forex</strong>, <strong>Stocks</strong>, <strong>Indices</strong> and <strong>Bonds</strong>.</div>
+      </div>
+      <div class="flex gap-sm">
+        <span class="hero-badge" style="margin:0;">
+          <span class="pulse"></span> <span style="font-size:0.82rem;">Live · auto-refreshing</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Market overview cards -->
+    <div class="kpi-grid mb-lg">
+      <div class="kpi" style="cursor:pointer;" onclick="setClass('crypto')">
+        <div class="label" style="color:#ff2a4d;"><i class="fa-brands fa-bitcoin"></i> Crypto</div>
+        <div class="value" id="ovCrypto">—</div>
+        <div class="trend" id="ovCryptoChg">—</div>
+      </div>
+      <div class="kpi" style="cursor:pointer;" onclick="setClass('forex')">
+        <div class="label" style="color:#1f6dff;"><i class="fa-solid fa-money-bill-trend-up"></i> Forex</div>
+        <div class="value" id="ovForex">—</div>
+        <div class="trend" id="ovForexChg">—</div>
+      </div>
+      <div class="kpi" style="cursor:pointer;" onclick="setClass('stocks')">
+        <div class="label" style="color:#00ffa3;"><i class="fa-solid fa-chart-line"></i> Stocks</div>
+        <div class="value" id="ovStocks">—</div>
+        <div class="trend" id="ovStocksChg">—</div>
+      </div>
+      <div class="kpi" style="cursor:pointer;" onclick="setClass('indices')">
+        <div class="label" style="color:#ffb800;"><i class="fa-solid fa-chart-pie"></i> Indices</div>
+        <div class="value" id="ovIndices">—</div>
+        <div class="trend" id="ovIndicesChg">—</div>
+      </div>
+      <div class="kpi" style="cursor:pointer;" onclick="setClass('bonds')">
+        <div class="label" style="color:#00e5ff;"><i class="fa-solid fa-landmark"></i> Bonds</div>
+        <div class="value" id="ovBonds">—</div>
+        <div class="trend" id="ovBondsChg">—</div>
+      </div>
+    </div>
+
+    <div class="dash-grid" style="grid-template-columns: 1.6fr 1fr;">
+
+      <!-- Markets table -->
+      <div class="card glow">
+        <div class="flex flex-between mb-md" style="flex-wrap:wrap; gap:10px;">
+          <div>
+            <h3>Instruments</h3>
+            <div class="text-dim" style="font-size:0.85rem;" id="classLabel">All assets</div>
+          </div>
+          <div class="flex gap-sm" style="align-items:center; flex-wrap:wrap;">
+            <input type="text" id="searchInput" placeholder="Search..." style="padding:8px 14px; background:var(--bg-elev); border:1px solid var(--border); border-radius:8px; color:var(--text); width:180px; font-size:0.9rem;" />
+            <div class="chart-tabs" id="classTabs">
+              <button data-cls="all" class="active">All</button>
+              <button data-cls="crypto">Crypto</button>
+              <button data-cls="forex">Forex</button>
+              <button data-cls="stocks">Stocks</button>
+              <button data-cls="indices">Indices</button>
+              <button data-cls="bonds">Bonds</button>
+            </div>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="markets-table" id="marketsTable">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Price</th>
+                <th>24h %</th>
+                <th>7d trend</th>
+                <th>Fundamental</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detail panel -->
+      <div>
+        <div class="card glow mb-lg" id="detailCard">
+          <div class="flex gap-md mb-md" style="align-items:center;">
+            <div class="coin-icon" id="dIcon" style="width:48px; height:48px; font-size:1.1rem;">B</div>
+            <div style="flex:1;">
+              <div class="flex flex-between">
+                <strong style="font-size:1.2rem;" id="dSym">BTC</strong>
+                <span class="tag" id="dAssetTag">CRYPTO</span>
+              </div>
+              <div class="text-dim" style="font-size:0.85rem;" id="dName">Bitcoin</div>
+            </div>
+          </div>
+          <div style="font-size:2.4rem; font-weight:800; letter-spacing:-0.02em;" id="dPrice">$—</div>
+          <div id="dChg" class="text-green" style="font-weight:600;">+0.00%</div>
+
+          <div style="position:relative; height:160px; margin-top:14px;">
+            <canvas id="detailChart"></canvas>
+          </div>
+
+          <div class="kpi-grid" style="grid-template-columns: 1fr 1fr; gap:10px; margin-top:14px;">
+            <div class="kpi" style="padding:12px;">
+              <div class="label" style="font-size:0.78rem;">24h High</div>
+              <div class="value" style="font-size:1rem;" id="dHigh">—</div>
+            </div>
+            <div class="kpi" style="padding:12px;">
+              <div class="label" style="font-size:0.78rem;">24h Low</div>
+              <div class="value" style="font-size:1rem;" id="dLow">—</div>
+            </div>
+            <div class="kpi" style="padding:12px;">
+              <div class="label" style="font-size:0.78rem;">Volume</div>
+              <div class="value" style="font-size:1rem;" id="dVol">—</div>
+            </div>
+            <div class="kpi" style="padding:12px;">
+              <div class="label" style="font-size:0.78rem;">RSI(14)</div>
+              <div class="value" style="font-size:1rem;" id="dRsi">—</div>
+            </div>
+          </div>
+
+          <div class="flex gap-sm mt-md">
+            <button class="btn btn-primary btn-block" onclick="quickTrade('BUY')"><i class="fa-solid fa-arrow-trend-up"></i> Buy</button>
+            <button class="btn btn-danger btn-block" onclick="quickTrade('SELL')"><i class="fa-solid fa-arrow-trend-down"></i> Sell</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="mb-md"><i class="fa-solid fa-newspaper text-blue"></i> Market news</h3>
+          <div id="newsList"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/main.js"></script>
+<script src="js/algo.js"></script>
+<script>
+const u = requireAuth();
+const acct = getAccount();
+
+let currentClass = 'all';
+let currentSym = 'BTC';
+let detailChart = null;
+
+function getList() {
+  let list = currentClass === 'all'
+    ? ALL_INSTRUMENTS
+    : MARKETS[currentClass].map(i => ({ ...i, asset: currentClass }));
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if (q) list = list.filter(i =>
+    i.sym.toLowerCase().includes(q) ||
+    i.name.toLowerCase().includes(q) ||
+    i.pair.toLowerCase().includes(q)
+  );
+  return list;
+}
+
+const allocColors = { crypto: '#ff2a4d', forex: '#1f6dff', stocks: '#00ffa3', indices: '#ffb800', bonds: '#00e5ff' };
+
+// Inline sparkline (mini SVG, simulated 7d)
+function sparkline(seed, up) {
+  const points = [];
+  let v = 50;
+  for (let i = 0; i < 24; i++) {
+    v += (Math.sin(seed + i * 0.5) + (Math.random() - 0.5)) * (up ? 2.5 : 2.5);
+    if (up) v += i * 0.4; else v -= i * 0.4;
+    points.push(v);
+  }
+  const min = Math.min(...points), max = Math.max(...points);
+  const w = 100, h = 30;
+  const path = points.map((p, i) => {
+    const x = (i / (points.length - 1)) * w;
+    const y = h - ((p - min) / (max - min || 1)) * h;
+    return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const color = up ? '#00ffa3' : '#ff2a4d';
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.6" /></svg>`;
+}
+
+function fundamentalBadge(sym) {
+  const f = (typeof FUNDAMENTALS !== 'undefined' && FUNDAMENTALS[sym]) || 0;
+  let label, color;
+  if (f >= 1)       { label = 'Strong buy'; color = '#00ffa3'; }
+  else if (f >= 0.3){ label = 'Buy';        color = '#00e5ff'; }
+  else if (f >= -0.3){label = 'Neutral';    color = '#9aa3b8'; }
+  else if (f >= -1) { label = 'Sell';       color = '#ffb800'; }
+  else              { label = 'Strong sell';color = '#ff2a4d'; }
+  return `<span class="tag" style="background:${color}22; color:${color};">${label}</span>`;
+}
+
+function renderTable() {
+  const tbody = document.querySelector('#marketsTable tbody');
+  const list = getList();
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px;" class="text-dim">No matches.</td></tr>`; return; }
+
+  tbody.innerHTML = list.map(i => {
+    const cls = i.asset || 'crypto';
+    const up = i.chg >= 0;
+    return `
+      <tr style="cursor:pointer;" onclick="selectInstrument('${i.sym}','${cls}')">
+        <td>
+          <div class="coin-cell">
+            <div class="coin-icon ${i.iconClass||''}" style="background:${allocColors[cls]}; width:36px; height:36px; font-size:0.85rem;">${i.icon || i.sym[0]}</div>
+            <div>
+              <strong>${i.sym}</strong>
+              <div class="text-mute" style="font-size:0.78rem;">${i.name}</div>
+            </div>
+          </div>
+        </td>
+        <td><strong>${fmtPrice(cls, i.price)}</strong></td>
+        <td class="${up ? 'text-green' : 'text-red'}"><strong>${up ? '+' : ''}${i.chg.toFixed(2)}%</strong></td>
+        <td>${sparkline(i.sym.charCodeAt(0), up)}</td>
+        <td>${fundamentalBadge(i.sym)}</td>
+        <td>
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); selectInstrument('${i.sym}','${cls}'); quickTrade('BUY');"><i class="fa-solid fa-bolt"></i> Trade</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setClass(c) {
+  currentClass = c;
+  document.querySelectorAll('#classTabs button').forEach(b => b.classList.toggle('active', b.dataset.cls === c));
+  document.getElementById('classLabel').textContent = c === 'all' ? 'All assets' : c.charAt(0).toUpperCase() + c.slice(1);
+  renderTable();
+}
+
+document.getElementById('classTabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-cls]'); if (b) setClass(b.dataset.cls);
+});
+document.getElementById('searchInput').addEventListener('input', renderTable);
+
+/* ---------- DETAIL PANEL ---------- */
+function selectInstrument(sym, cls) {
+  const inst = MARKETS[cls].find(i => i.sym === sym);
+  if (!inst) return;
+  currentSym = sym;
+  const up = inst.chg >= 0;
+  document.getElementById('dSym').textContent = inst.sym;
+  document.getElementById('dName').textContent = inst.name;
+  document.getElementById('dPrice').textContent = fmtPrice(cls, inst.price);
+  document.getElementById('dChg').textContent = (up ? '+' : '') + inst.chg.toFixed(2) + '%';
+  document.getElementById('dChg').className = up ? 'text-green' : 'text-red';
+  document.getElementById('dAssetTag').textContent = cls.toUpperCase();
+  document.getElementById('dAssetTag').style.background = allocColors[cls] + '22';
+  document.getElementById('dAssetTag').style.color = allocColors[cls];
+  const ic = document.getElementById('dIcon');
+  ic.textContent = inst.icon || inst.sym[0];
+  ic.style.background = allocColors[cls];
+  document.getElementById('dHigh').textContent = fmtPrice(cls, inst.price * 1.024);
+  document.getElementById('dLow').textContent  = fmtPrice(cls, inst.price * 0.976);
+  document.getElementById('dVol').textContent  = '$' + (Math.random() * 800 + 100).toFixed(0) + 'M';
+  document.getElementById('dRsi').textContent  = (40 + Math.random() * 30).toFixed(0);
+
+  // Build a synthetic 60-bar series
+  const series = [];
+  let v = inst.price * 0.97;
+  for (let i = 0; i < 60; i++) {
+    v *= 1 + (Math.random() - 0.48) * 0.01;
+    series.push(v);
+  }
+  series[series.length - 1] = inst.price;
+
+  if (detailChart) detailChart.destroy();
+  const ctx = document.getElementById('detailChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 160);
+  grad.addColorStop(0, (up ? 'rgba(0, 255, 163, 0.4)' : 'rgba(255, 42, 77, 0.4)'));
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  detailChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: series.map((_,i)=>i),
+      datasets: [{ data: series, borderColor: up ? '#00ffa3' : '#ff2a4d', backgroundColor: grad, fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
+function quickTrade(side) {
+  const inst = ALL_INSTRUMENTS.find(i => i.sym === currentSym);
+  if (!inst) return;
+  const amt = 250;
+  if (side === 'BUY' && acct.wallets.trading.balance < amt) {
+    return toast('Trading wallet too low. Transfer from main first.', 'error');
+  }
+  const trade = {
+    id: 'T' + Date.now(),
+    sym: inst.sym, asset: inst.asset, side,
+    qty: amt / inst.price,
+    entry: inst.price, exit: inst.price,
+    pl: 0, time: Date.now(), bot: 'Manual', status: 'OPEN',
+  };
+  acct.trades.unshift(trade);
+  if (side === 'BUY') {
+    acct.wallets.trading.balance = +(acct.wallets.trading.balance - amt).toFixed(2);
+  } else {
+    acct.wallets.trading.balance = +(acct.wallets.trading.balance + amt).toFixed(2);
+  }
+  setAccount(acct);
+  toast(`${side} order placed for ${inst.sym} at ${fmtPrice(inst.asset, inst.price)}`);
+}
+
+/* ---------- OVERVIEWS ---------- */
+function avgChange(arr) { return arr.reduce((a, b) => a + b.chg, 0) / arr.length; }
+function paintOverviews() {
+  Object.entries(MARKETS).forEach(([cls, list]) => {
+    const avg = avgChange(list);
+    const up = avg >= 0;
+    const lbl = cls === 'crypto' ? 'Crypto' : cls === 'forex' ? 'Forex' : cls === 'stocks' ? 'Stocks' : cls === 'indices' ? 'Indices' : 'Bonds';
+    document.getElementById('ov' + lbl).textContent = list.length + ' assets';
+    const chgEl = document.getElementById('ov' + lbl + 'Chg');
+    chgEl.textContent = (up ? '▲ ' : '▼ ') + avg.toFixed(2) + '%';
+    chgEl.style.color = up ? 'var(--green)' : 'var(--red)';
+  });
+}
+
+/* ---------- NEWS (simulated) ---------- */
+const NEWS = [
+  { time: '2h', sym: 'BTC',   title: 'Bitcoin reclaims $67K as ETF inflows hit 30-day high.', src: 'Bloomberg' },
+  { time: '3h', sym: 'NVDA',  title: 'NVIDIA reports record Q3 earnings, AI chip demand surges.', src: 'Reuters' },
+  { time: '5h', sym: 'EURUSD',title: 'ECB hints at slower pace of rate cuts in 2026.', src: 'FT' },
+  { time: '6h', sym: 'SPX',   title: 'S&P 500 closes at all-time high on tech rally.', src: 'CNBC' },
+  { time: '8h', sym: 'ETH',   title: 'Ethereum dev team confirms next upgrade for Q3.', src: 'CoinDesk' },
+  { time: '11h',sym: 'US10Y', title: 'US 10-year yields edge higher ahead of CPI print.', src: 'WSJ' },
+];
+function renderNews() {
+  document.getElementById('newsList').innerHTML = NEWS.map(n => `
+    <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+      <div class="flex flex-between" style="margin-bottom:4px;">
+        <span class="tag tag-buy" style="background:rgba(0,162,255,0.1); color:var(--blue-glow);">${n.sym}</span>
+        <span class="text-mute" style="font-size:0.75rem;">${n.time} ago · ${n.src}</span>
+      </div>
+      <div style="font-size:0.9rem;">${n.title}</div>
+    </div>
+  `).join('');
+}
+
+/* ---------- LIVE PRICE TICK ---------- */
+function liveTick() {
+  ALL_INSTRUMENTS.forEach(i => tickPrice(i));
+  renderTable();
+  paintOverviews();
+  // Refresh detail price/chg subtly
+  const inst = ALL_INSTRUMENTS.find(i => i.sym === currentSym);
+  if (inst) {
+    const up = inst.chg >= 0;
+    document.getElementById('dPrice').textContent = fmtPrice(inst.asset, inst.price);
+    document.getElementById('dChg').textContent = (up?'+':'') + inst.chg.toFixed(2) + '%';
+    document.getElementById('dChg').className = up ? 'text-green' : 'text-red';
+  }
+}
+
+renderTable();
+paintOverviews();
+renderNews();
+selectInstrument('BTC', 'crypto');
+setInterval(liveTick, 2500);
+</script>
+</body>
+</html>

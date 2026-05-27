@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deposit — CryptoVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <a href="index.html" class="logo">
+      <span class="logo-mark">CV</span><span>CryptoVault</span>
+    </a>
+    <nav>
+      <a href="dashboard.html"><i class="icon fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="markets.html"><i class="icon fa-solid fa-chart-line"></i> Markets</a>
+      <a href="trading.html"><i class="icon fa-solid fa-robot"></i> AI Trading</a>
+      <a href="deposit.html" class="active"><i class="icon fa-solid fa-arrow-down-to-bracket"></i> Deposit</a>
+      <a href="withdraw.html"><i class="icon fa-solid fa-arrow-up-from-bracket"></i> Withdraw</a>
+      <a href="about.html"><i class="icon fa-solid fa-circle-info"></i> How it works</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="card" style="padding:14px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div class="logo-mark" style="width:34px; height:34px; font-size:0.85rem;" data-user-initials>U</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:600; font-size:0.88rem;" data-user-name>Trader</div>
+            <div class="text-mute" style="font-size:0.75rem;" data-user-email>—</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm btn-block" onclick="logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+
+    <div class="page-head">
+      <div>
+        <h1>Deposit funds</h1>
+        <div class="sub">Add money to your account. Bots start trading the moment funds clear.</div>
+      </div>
+      <div>
+        <span class="text-dim" style="font-size:0.85rem;">Main wallet</span>
+        <div style="font-size:1.4rem; font-weight:800;" id="curBalance">—</div>
+      </div>
+    </div>
+
+    <div class="dash-grid" style="grid-template-columns: 1.5fr 1fr;">
+
+      <div class="card glow">
+        <h3 class="mb-md">1. Choose method</h3>
+        <div class="method-grid" id="methodGrid">
+          <div class="method selected" data-method="card" data-fee="2.9" data-min="50" data-max="50000">
+            <div class="icon"><i class="fa-solid fa-credit-card"></i></div>
+            <strong>Debit / Credit</strong>
+            <span>Visa · Mastercard · 2.9% fee · Instant</span>
+          </div>
+          <div class="method" data-method="bank" data-fee="0" data-min="100" data-max="500000">
+            <div class="icon" style="background: linear-gradient(135deg, #1f6dff, #00a2ff);"><i class="fa-solid fa-building-columns"></i></div>
+            <strong>Bank Wire</strong>
+            <span>ACH / SEPA / SWIFT · 0% fee · 1-2 days</span>
+          </div>
+          <div class="method" data-method="btc" data-fee="0" data-min="50" data-max="1000000">
+            <div class="icon" style="background: linear-gradient(135deg, #f7931a, #ffb800);"><i class="fa-brands fa-bitcoin"></i></div>
+            <strong>Bitcoin</strong>
+            <span>BTC network · 0% fee · ~10 min</span>
+          </div>
+          <div class="method" data-method="eth" data-fee="0" data-min="50" data-max="1000000">
+            <div class="icon" style="background: linear-gradient(135deg, #627eea, #1f6dff);">Ξ</div>
+            <strong>Ethereum</strong>
+            <span>ERC-20 · 0% fee · ~2 min</span>
+          </div>
+          <div class="method" data-method="usdt" data-fee="0" data-min="50" data-max="1000000">
+            <div class="icon" style="background: linear-gradient(135deg, #26a17b, #00ffa3);">₮</div>
+            <strong>USDT</strong>
+            <span>Tron / ERC-20 · 0% fee · Instant</span>
+          </div>
+          <div class="method" data-method="apple" data-fee="2.9" data-min="50" data-max="10000">
+            <div class="icon" style="background: linear-gradient(135deg, #000, #444);"><i class="fa-brands fa-apple-pay"></i></div>
+            <strong>Apple Pay</strong>
+            <span>Touch ID / Face ID · 2.9% · Instant</span>
+          </div>
+        </div>
+
+        <h3 class="mb-md mt-lg">2. Enter amount</h3>
+        <div class="amount-input-wrap">
+          <input type="number" class="amount-input" id="amount" placeholder="$0.00" min="50" value="500" />
+        </div>
+        <div class="preset-amounts">
+          <button data-amt="100">$100</button>
+          <button data-amt="500">$500</button>
+          <button data-amt="1000">$1,000</button>
+          <button data-amt="5000">$5,000</button>
+          <button data-amt="10000">$10,000</button>
+        </div>
+
+        <h3 class="mb-md mt-lg">3. Review &amp; confirm</h3>
+        <div class="summary-box">
+          <div class="row"><span class="text-dim">Method</span><span id="sumMethod">Debit / Credit</span></div>
+          <div class="row"><span class="text-dim">Amount</span><span id="sumAmount">$500.00</span></div>
+          <div class="row"><span class="text-dim">Fee</span><span id="sumFee">$14.50 (2.9%)</span></div>
+          <div class="row"><span class="text-dim">Estimated arrival</span><span id="sumEta">Instant</span></div>
+          <div class="row total"><span>You will be credited</span><span id="sumTotal" class="text-green">$485.50</span></div>
+        </div>
+
+        <!-- Card form -->
+        <div id="cardForm">
+          <div class="form-group">
+            <label>Card number</label>
+            <input type="text" placeholder="1234 5678 9012 3456" maxlength="19" />
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Expiry</label><input type="text" placeholder="MM/YY" maxlength="5" /></div>
+            <div class="form-group"><label>CVC</label><input type="text" placeholder="123" maxlength="4" /></div>
+          </div>
+          <div class="form-group">
+            <label>Cardholder name</label>
+            <input type="text" placeholder="Alex Reed" />
+          </div>
+        </div>
+
+        <!-- Crypto wallet display -->
+        <div id="cryptoForm" class="hidden">
+          <div class="card" style="background: var(--bg-elev); padding:18px;">
+            <div class="text-dim mb-md" style="font-size:0.85rem;">Send your funds to this deposit address. They'll be credited automatically after network confirmations.</div>
+            <div style="display:flex; align-items:center; gap:14px; background:var(--bg-card); padding:14px; border-radius:10px; border:1px solid var(--border);">
+              <img id="qrImg" src="" alt="QR Code" style="width:96px; height:96px; border-radius:8px; background:#fff;" />
+              <div style="flex:1; min-width:0;">
+                <div class="text-mute" style="font-size:0.78rem;">Deposit address</div>
+                <div id="walletAddr" style="font-family: monospace; font-size:0.85rem; word-break:break-all; margin-top:4px;"></div>
+                <button class="btn btn-ghost btn-sm mt-sm" onclick="copyAddr()"><i class="fa-solid fa-copy"></i> Copy address</button>
+              </div>
+            </div>
+            <div class="text-dim mt-md" style="font-size:0.82rem;"><i class="fa-solid fa-triangle-exclamation"></i> Send only <span id="netLabel">BTC</span> to this address. Other assets will be lost.</div>
+          </div>
+        </div>
+
+        <!-- Bank wire info -->
+        <div id="bankForm" class="hidden">
+          <div class="summary-box">
+            <div class="row"><span class="text-dim">Beneficiary</span><span>CryptoVault Labs Inc.</span></div>
+            <div class="row"><span class="text-dim">Bank</span><span>JPMorgan Chase, NY</span></div>
+            <div class="row"><span class="text-dim">Account #</span><span>9847-2310-4520</span></div>
+            <div class="row"><span class="text-dim">Routing #</span><span>021000021</span></div>
+            <div class="row"><span class="text-dim">SWIFT / BIC</span><span>CHASUS33</span></div>
+            <div class="row"><span class="text-dim">Reference</span><span style="font-family:monospace;" id="bankRef">CV-—</span></div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg mt-md" id="confirmBtn">
+          <i class="fa-solid fa-lock"></i> Confirm deposit of <span id="btnAmt">$500.00</span>
+        </button>
+
+        <div class="text-mute mt-md text-center" style="font-size:0.78rem;">
+          <i class="fa-solid fa-shield-halved"></i> Encrypted end-to-end · 256-bit SSL · Demo simulated
+        </div>
+      </div>
+
+      <div>
+        <div class="card mb-lg">
+          <h3 class="mb-md">Why deposit with CryptoVault?</h3>
+          <ul style="list-style:none; display:flex; flex-direction:column; gap:14px;">
+            <li class="flex gap-sm" style="align-items:flex-start;">
+              <i class="fa-solid fa-bolt text-blue" style="margin-top:4px;"></i>
+              <div><strong>Instant deployment.</strong><div class="text-dim" style="font-size:0.88rem;">Bots begin trading the second funds clear.</div></div>
+            </li>
+            <li class="flex gap-sm" style="align-items:flex-start;">
+              <i class="fa-solid fa-shield-halved text-blue" style="margin-top:4px;"></i>
+              <div><strong>Insured custody.</strong><div class="text-dim" style="font-size:0.88rem;">Up to $250k via FDIC partner banks &amp; cold storage.</div></div>
+            </li>
+            <li class="flex gap-sm" style="align-items:flex-start;">
+              <i class="fa-solid fa-percent text-blue" style="margin-top:4px;"></i>
+              <div><strong>Zero fees on crypto.</strong><div class="text-dim" style="font-size:0.88rem;">Only network gas applies — we cover the rest.</div></div>
+            </li>
+            <li class="flex gap-sm" style="align-items:flex-start;">
+              <i class="fa-solid fa-clock text-blue" style="margin-top:4px;"></i>
+              <div><strong>Withdraw anytime.</strong><div class="text-dim" style="font-size:0.88rem;">No lock-ups, no minimum holding period.</div></div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card glow-red" style="background: linear-gradient(135deg, rgba(255,0,60,0.08), rgba(31,109,255,0.08));">
+          <div class="flex gap-md" style="align-items:center;">
+            <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=300&q=80" style="width:80px; height:80px; border-radius:12px; object-fit:cover;" alt="" />
+            <div>
+              <div class="text-mute" style="font-size:0.78rem; letter-spacing:0.1em; text-transform:uppercase;">First-time bonus</div>
+              <strong style="font-size:1.1rem;">Deposit $1,000+</strong>
+              <div class="text-dim" style="font-size:0.88rem;">Get 30 days zero fees on AI bot trades.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-lg">
+          <h3 class="mb-md">Recent deposits</h3>
+          <div id="recentDeposits"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/main.js"></script>
+<script>
+const u = requireAuth();
+const acct = getAccount();
+document.getElementById('curBalance').textContent = fmtMoney(acct.wallets.main.balance);
+
+let selected = { method: 'card', fee: 2.9, min: 50, max: 50000, label: 'Debit / Credit', eta: 'Instant' };
+const methodLabels = {
+  card:  { label: 'Debit / Credit', eta: 'Instant', addr: null },
+  bank:  { label: 'Bank Wire',      eta: '1-2 business days', addr: null },
+  btc:   { label: 'Bitcoin',        eta: '~10 minutes', addr: 'bc1qkx7l9z8e3y6m5n0vh4qf2u8d3w7p9r5tcryptv' },
+  eth:   { label: 'Ethereum',       eta: '~2 minutes',  addr: '0x7d2C4f9A3b1e8C5F6d2A9B1E4c8D7e3F5a9B2c8D' },
+  usdt:  { label: 'USDT (TRC-20)',  eta: 'Instant',     addr: 'TKf8GpL3mQ7zX1nVcYrJh2WdRbS4eN9oPq' },
+  apple: { label: 'Apple Pay',      eta: 'Instant',     addr: null },
+};
+
+function selectMethod(node) {
+  document.querySelectorAll('.method').forEach(m => m.classList.remove('selected'));
+  node.classList.add('selected');
+  const m = node.dataset.method;
+  selected = {
+    method: m,
+    fee: parseFloat(node.dataset.fee),
+    min: parseFloat(node.dataset.min),
+    max: parseFloat(node.dataset.max),
+    label: methodLabels[m].label,
+    eta: methodLabels[m].eta,
+  };
+  document.getElementById('cardForm').classList.toggle('hidden', m !== 'card' && m !== 'apple');
+  document.getElementById('bankForm').classList.toggle('hidden', m !== 'bank');
+  const isCrypto = ['btc','eth','usdt'].includes(m);
+  document.getElementById('cryptoForm').classList.toggle('hidden', !isCrypto);
+  if (isCrypto) {
+    document.getElementById('walletAddr').textContent = methodLabels[m].addr;
+    document.getElementById('netLabel').textContent = m.toUpperCase();
+    document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&bgcolor=ffffff&data=${encodeURIComponent(methodLabels[m].addr)}`;
+  }
+  if (m === 'bank') document.getElementById('bankRef').textContent = 'CV-' + (u.email.split('@')[0].toUpperCase().slice(0,6) || 'TRADER') + '-' + Math.floor(Math.random()*9000+1000);
+  updateSummary();
+}
+
+function updateSummary() {
+  const amt = parseFloat(document.getElementById('amount').value) || 0;
+  const fee = +(amt * selected.fee / 100).toFixed(2);
+  const total = +(amt - fee).toFixed(2);
+  document.getElementById('sumMethod').textContent = selected.label;
+  document.getElementById('sumAmount').textContent = fmtMoney(amt);
+  document.getElementById('sumFee').textContent = fee === 0 ? 'Free' : fmtMoney(fee) + ' (' + selected.fee + '%)';
+  document.getElementById('sumEta').textContent = selected.eta;
+  document.getElementById('sumTotal').textContent = fmtMoney(total);
+  document.getElementById('btnAmt').textContent = fmtMoney(amt);
+}
+
+document.getElementById('methodGrid').addEventListener('click', e => {
+  const m = e.target.closest('.method');
+  if (m) selectMethod(m);
+});
+
+document.getElementById('amount').addEventListener('input', updateSummary);
+document.querySelectorAll('.preset-amounts button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.getElementById('amount').value = b.dataset.amt;
+    updateSummary();
+  });
+});
+
+function copyAddr() {
+  const a = document.getElementById('walletAddr').textContent;
+  navigator.clipboard?.writeText(a);
+  toast('Address copied to clipboard');
+}
+
+document.getElementById('confirmBtn').addEventListener('click', () => {
+  const amt = parseFloat(document.getElementById('amount').value);
+  if (!amt || amt < selected.min) return toast('Minimum deposit is ' + fmtMoney(selected.min), 'error');
+  if (amt > selected.max) return toast('Maximum is ' + fmtMoney(selected.max), 'error');
+
+  const fee = +(amt * selected.fee / 100).toFixed(2);
+  const credited = +(amt - fee).toFixed(2);
+
+  acct.deposits.unshift({
+    id: 'D' + Date.now(),
+    amount: credited,
+    method: selected.label,
+    status: ['btc','eth','bank'].includes(selected.method) ? 'PENDING' : 'COMPLETED',
+    time: Date.now(),
+  });
+  acct.balance = +(acct.balance + credited).toFixed(2);
+  acct.wallets.main.balance = +(acct.wallets.main.balance + credited).toFixed(2);
+  setAccount(acct);
+  toast('Deposit of ' + fmtMoney(credited) + ' added to Main wallet!');
+  setTimeout(() => location.href = 'dashboard.html', 1100);
+});
+
+function renderRecent() {
+  const el = document.getElementById('recentDeposits');
+  if (!acct.deposits.length) { el.innerHTML = '<div class="text-dim text-center">No deposits yet.</div>'; return; }
+  el.innerHTML = acct.deposits.slice(0, 5).map(d => `
+    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom: 1px solid var(--border); align-items:center;">
+      <div>
+        <div style="font-weight:600;">+${fmtMoney(d.amount)}</div>
+        <div class="text-mute" style="font-size:0.78rem;">${d.method} · ${new Date(d.time).toLocaleDateString()}</div>
+      </div>
+      <span class="tag ${d.status === 'COMPLETED' ? 'tag-buy' : 'tag-pending'}">${d.status}</span>
+    </div>
+  `).join('');
+}
+renderRecent();
+updateSummary();
+</script>
+</body>
+</html>
