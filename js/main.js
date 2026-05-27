@@ -323,3 +323,67 @@ function tickPrice(inst) {
   inst.chg = +(inst.chg + (Math.random() - 0.5) * 0.05).toFixed(2);
   return inst;
 }
+
+
+
+/* ================================================================
+   v4 · LIVE PAYOUTS TICKER — FTMO/FundedNext signature element
+   Renders into #payoutBar if present, scrolls automatically,
+   refreshes the visible items every 12 seconds for "live" feel.
+   ================================================================ */
+
+const PAYOUT_NAMES = [
+  ['🇺🇸', 'Marcus T.'],   ['🇬🇧', 'Aisha K.'],     ['🇩🇪', 'Lukas R.'],   ['🇫🇷', 'Théo D.'],
+  ['🇪🇸', 'Carlos M.'],   ['🇮🇹', 'Giulia B.'],    ['🇨🇦', 'Avery P.'],   ['🇦🇺', 'Liam J.'],
+  ['🇯🇵', 'Hiroshi N.'],  ['🇸🇬', 'Jia Hui L.'],   ['🇮🇳', 'Rohan S.'],   ['🇧🇷', 'Beatriz F.'],
+  ['🇲🇽', 'Diego R.'],    ['🇿🇦', 'Naledi M.'],    ['🇦🇪', 'Yusuf A.'],   ['🇳🇱', 'Jeroen B.'],
+  ['🇸🇪', 'Astrid L.'],   ['🇨🇭', 'Léa H.'],       ['🇰🇷', 'Min-jun K.'], ['🇵🇱', 'Kacper W.'],
+  ['🇹🇷', 'Selin Y.'],    ['🇮🇪', 'Niamh O.'],     ['🇵🇹', 'João P.'],    ['🇦🇷', 'Lucia G.'],
+  ['🇨🇱', 'Sebastián V.'], ['🇮🇩', 'Putri N.'],     ['🇹🇭', 'Anan T.'],    ['🇻🇳', 'Linh N.'],
+  ['🇪🇬', 'Karim H.'],    ['🇳🇬', 'Adaeze O.'],    ['🇰🇪', 'Brian K.'],   ['🇨🇴', 'Mariana C.'],
+];
+
+function randomPayout() {
+  const [flag, name] = PAYOUT_NAMES[Math.floor(Math.random() * PAYOUT_NAMES.length)];
+  // Skewed distribution: lots of small, a few big payouts
+  const r = Math.random();
+  let amt;
+  if (r < 0.55)      amt = Math.floor(500 + Math.random() * 4500);    // $500–$5k
+  else if (r < 0.85) amt = Math.floor(5000 + Math.random() * 15000);  // $5k–$20k
+  else if (r < 0.97) amt = Math.floor(20000 + Math.random() * 30000); // $20k–$50k
+  else               amt = Math.floor(50000 + Math.random() * 100000); // $50k–$150k
+
+  const minutesAgo = Math.floor(Math.random() * 58) + 1;
+  return { flag, name, amt, minutesAgo };
+}
+
+function payoutToHTML(p) {
+  return `
+    <span class="payout-item">
+      <span class="check"><i class="fa-solid fa-check"></i></span>
+      <span class="flag">${p.flag}</span>
+      <span><strong>${p.name}</strong> withdrew</span>
+      <span class="amt">$${p.amt.toLocaleString()}</span>
+      <span class="when">· ${p.minutesAgo} min ago</span>
+    </span>
+  `;
+}
+
+function buildPayoutTicker() {
+  const bar = document.getElementById('payoutBar');
+  if (!bar) return;
+  const track = bar.querySelector('.payout-track');
+  if (!track) return;
+
+  function paint() {
+    const items = Array.from({ length: 14 }, randomPayout);
+    // Duplicate sequence for seamless infinite scroll
+    track.innerHTML = items.map(payoutToHTML).join('') + items.map(payoutToHTML).join('');
+  }
+  paint();
+  // Refresh every ~30s with new fake "live" payouts
+  setInterval(paint, 30000);
+}
+
+/* Auto-init the ticker on pages that include it. */
+document.addEventListener('DOMContentLoaded', buildPayoutTicker);

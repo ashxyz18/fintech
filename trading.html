@@ -11,6 +11,9 @@
 </head>
 <body>
 
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+
 <div class="app-layout">
 
   <aside class="sidebar">
@@ -53,6 +56,95 @@
       </div>
       <div class="bot-img">
         <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=900&q=80" alt="AI Trading" />
+      </div>
+    </div>
+
+    <!-- ===== CHALLENGE-STYLE RISK DASHBOARD ===== -->
+    <div class="metrix-panel">
+      <div class="metrix-head">
+        <h3>RISK ENGINE · LIVE TELEMETRY<strong>Real-time risk parameters</strong></h3>
+        <div class="flex gap-sm" style="flex-wrap:wrap;">
+          <span class="status-pill"><span class="dot"></span> Stop-loss armed</span>
+          <span class="status-pill"><span class="dot"></span> 3:1 R:R locked</span>
+        </div>
+      </div>
+
+      <div class="metrix-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div class="metrix-cell">
+          <div class="ring ring-lime ring-lg" style="--p:30;" data-label="1.0%"></div>
+          <div class="info">
+            <div class="lbl">Stop-loss</div>
+            <div class="val">1.0%</div>
+            <div class="sub">per trade</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-green ring-lg" style="--p:90;" data-label="3.0%"></div>
+          <div class="info">
+            <div class="lbl">Take-profit</div>
+            <div class="val text-green">3.0%</div>
+            <div class="sub">3:1 reward</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-teal ring-lg" style="--p:62;" data-label="2.5%"></div>
+          <div class="info">
+            <div class="lbl">Position size</div>
+            <div class="val">2.5%</div>
+            <div class="sub">of equity</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-blue ring-lg" style="--p:67;" data-label="2/2"></div>
+          <div class="info">
+            <div class="lbl">Confluence</div>
+            <div class="val">2+</div>
+            <div class="sub">strategies must agree</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-red ring-lg" style="--p:18;" data-label="-5%"></div>
+          <div class="info">
+            <div class="lbl">Daily loss limit</div>
+            <div class="val text-red">-5%</div>
+            <div class="sub">circuit breaker</div>
+          </div>
+        </div>
+        <div class="metrix-cell">
+          <div class="ring ring-gold ring-lg" style="--p:62;" data-label="62"></div>
+          <div class="info">
+            <div class="lbl">Live decisions</div>
+            <div class="val" id="liveDecisions">0</div>
+            <div class="sub">this session</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.06);">
+        <div class="target-row">
+          <div class="label-block">
+            <div class="lbl">Account equity vs target</div>
+            <div class="sub">Goal: +10% from session start</div>
+          </div>
+          <div class="target-bar"><span id="riskBarTarget" style="width:0%;"></span></div>
+          <div class="target-value text-lime" id="riskValTarget">+$0<span class="of">of $1,000</span></div>
+        </div>
+        <div class="target-row">
+          <div class="label-block">
+            <div class="lbl">Daily loss budget consumed</div>
+            <div class="sub">Bot halts if -5% breached</div>
+          </div>
+          <div class="target-bar bar-red"><span id="riskBarDaily" style="width:0%;"></span></div>
+          <div class="target-value text-red" id="riskValDaily">-$0<span class="of">of -$500</span></div>
+        </div>
+        <div class="target-row">
+          <div class="label-block">
+            <div class="lbl">Open positions</div>
+            <div class="sub">Max 8 concurrent</div>
+          </div>
+          <div class="target-bar bar-blue"><span id="riskBarOpen" style="width:0%;"></span></div>
+          <div class="target-value" id="riskValOpen">0<span class="of">of 8</span></div>
+        </div>
       </div>
     </div>
 
@@ -404,7 +496,42 @@ function liveStep() {
     const el = document.getElementById('currentMode');
     if (el) { el.textContent = m.label; el.style.color = m.color; }
   }
+
+  // ----- Risk dashboard live update -----
+  paintRiskDashboard();
 }
+
+function paintRiskDashboard() {
+  if (!bot) return;
+  const startEq = bot.startEquity || 10000;
+  const equityNow = bot.equity || startEq;
+  const profit = equityNow - startEq;
+  const target = startEq * 0.10;
+  const dailyLoss = Math.min(0, bot.dailyPnl || 0);
+  const dailyBudget = startEq * 0.05;
+  const openCount = Object.keys(bot.positions || {}).length;
+  const maxOpen = bot.cfg.maxOpen || 8;
+  const decisions = (bot.log || []).length;
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const setBar = (id, pct) => {
+    const el = document.getElementById(id);
+    if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  };
+  const setHTML = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+  set('liveDecisions', decisions);
+
+  setBar('riskBarTarget', Math.max(0, profit / target * 100));
+  setHTML('riskValTarget',
+    `${profit >= 0 ? '+' : ''}${fmtMoney(profit)}<span class="of">of ${fmtMoney(target)}</span>`);
+
+  setBar('riskBarDaily', Math.abs(dailyLoss) / dailyBudget * 100);
+  setHTML('riskValDaily',
+    `${fmtMoney(dailyLoss)}<span class="of">of -${fmtMoney(dailyBudget)}</span>`);
+
+  setBar('riskBarOpen', openCount / maxOpen * 100);
+  setHTML('riskValOpen', `${openCount}<span class="of">of ${maxOpen}</span>`);
 
 /* ---------- BACKTEST ---------- */
 function runBacktest() {

@@ -376,3 +376,148 @@ setInterval(() => {
     renderTrades(document.querySelector('#tradeFilters .active').dataset.cls);
   });
 }, 6000);
+
+
+
+/* =========================================================
+   LIVE METRIX PANEL · v3 (FTMO/FundedNext aesthetic)
+   Wires the gauge rings + target progress bars to live state
+   ========================================================= */
+
+(function initLiveMetrix() {
+  const startEquity = (account.equity[0] && account.equity[0].v) || 10000;
+  const accountSize = startEquity;
+
+  // ----- Compute metrics from live account data -----
+  function computeMetrics() {
+    const closed = account.trades.filter(t => t.status === 'CLOSED');
+    const wins = closed.filter(t => t.pl > 0);
+    const losses = closed.filter(t => t.pl <= 0);
+    const winRate = closed.length ? (wins.length / closed.length) * 100 : 84;
+    const grossProfit = wins.reduce((a, b) => a + b.pl, 0) || 1;
+    const grossLoss = Math.abs(losses.reduce((a, b) => a + b.pl, 0)) || 1;
+    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : 3.14;
+
+    // Simple Sharpe approximation from equity curve daily returns
+    const returns = [];
+    for (let i = 1; i < account.equity.length; i++) {
+      returns.push((account.equity[i].v - account.equity[i - 1].v) / account.equity[i - 1].v);
+    }
+    const mean = returns.reduce((a, b) => a + b, 0) / (returns.length || 1);
+    const variance = returns.reduce((a, b) => a + (b - mean) ** 2, 0) / (returns.length || 1);
+    const std = Math.sqrt(variance) || 0.01;
+    const sharpe = (mean / std) * Math.sqrt(252);
+
+    // Max drawdown from equity curve
+    let peak = account.equity[0]?.v || startEquity;
+    let maxDD = 0;
+    account.equity.forEach(p => {
+      if (p.v > peak) peak = p.v;
+      const dd = (p.v - peak) / peak;
+      if (dd < maxDD) maxDD = dd;
+    });
+    const maxDDPct = maxDD * 100;
+
+    const tradingDays = Math.min(100, account.equity.length);
+    const roi30d = ((account.balance - startEquity) / startEquity) * 100;
+
+    // Today's PnL approximation
+    const today = parseFloat(
+      (document.getElementById('todayPnl')?.textContent || '0')
+        .replace(/[^0-9.\-]/g, '')
+    ) || 0;
+
+    return {
+      winRate, profitFactor, sharpe,
+      maxDDPct, tradingDays, roi30d,
+      todayPnl: today,
+      profitToDate: account.balance - startEquity,
+      profitTarget: startEquity * 0.10,
+      dailyLossLimit: startEquity * 0.05,
+      maxDDLimit: startEquity * 0.10,
+    };
+  }
+
+  // ----- Set ring visual + label -----
+  function setRing(id, percent, label, color) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const clamped = Math.max(0, Math.min(100, percent));
+    el.style.setProperty('--p', clamped);
+    el.setAttribute('data-label', label);
+    if (color) el.style.setProperty('--c', color);
+  }
+
+  function setBar(id, percent) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.width = Math.max(0, Math.min(100, percent)) + '%';
+  }
+
+  function paintMetrix() {
+    const m = computeMetrics();
+
+    // Rings
+    setRing('ringWin', m.winRate, m.winRate.toFixed(0) + '%');
+    document.getElementById('mxWinRate').textContent = m.winRate.toFixed(0) + '%';
+
+    // Profit factor: 0..5 mapped to 0..100
+    setRing('ringPF', Math.min(100, m.profitFactor / 5 * 100), m.profitFactor.toFixed(2));
+    document.getElementById('mxPF').textContent = m.profitFactor.toFixed(2);
+
+    // Sharpe: 0..4 mapped
+    setRing('ringSharpe', Math.min(100, Math.max(0, m.sharpe) / 4 * 100), m.sharpe.toFixed(2));
+    document.getElementById('mxSharpe').textContent = m.sharpe.toFixed(2);
+
+    // Drawdown: more red as it approaches -10%
+    const ddPctOfLimit = Math.min(100, Math.abs(m.maxDDPct) / 10 * 100);
+    setRing('ringDD', ddPctOfLimit, m.maxDDPct.toFixed(1) + '%');
+    document.getElementById('mxDD').textContent = m.maxDDPct.toFixed(1) + '%';
+
+    // Trading days: out of 100
+    setRing('ringDays', m.tradingDays, String(m.tradingDays));
+    document.getElementById('mxDays').textContent = m.tradingDays + ' / 100';
+
+    // ROI: positive scaled to 30 = 100%
+    const roiPct = Math.min(100, Math.max(0, m.roi30d) / 30 * 100);
+    setRing('ringROI', roiPct, (m.roi30d >= 0 ? '+' : '') + m.roi30d.toFixed(0) + '%');
+    const roiEl = document.getElementById('mxROI');
+    roiEl.textContent = (m.roi30d >= 0 ? '+' : '') + m.roi30d.toFixed(1) + '%';
+    roiEl.className = 'val ' + (m.roi30d >= 0 ? 'text-green' : 'text-red');
+
+    // Open positions pill
+    const openCount = account.trades.filter(t => t.status === 'OPEN').length || account.holdings.length;
+    document.getElementById('metrixOpen').textContent = openCount;
+
+    // ----- Target progress bars -----
+    // Profit target
+    const profitPct = Math.max(0, (m.profitToDate / m.profitTarget) * 100);
+    setBar('barProfit', profitPct);
+    document.getElementById('valProfit').innerHTML =
+      `${m.profitToDate >= 0 ? '+' : ''}${fmtMoney(m.profitToDate)}<span class="of">of ${fmtMoney(m.profitTarget)}</span>`;
+
+    // Daily loss limit
+    const dailyLossUsed = Math.min(0, m.todayPnl);
+    const dailyPct = Math.min(100, Math.abs(dailyLossUsed) / m.dailyLossLimit * 100);
+    setBar('barDaily', dailyPct);
+    document.getElementById('valDaily').innerHTML =
+      `${fmtMoney(dailyLossUsed)}<span class="of">of -${fmtMoney(m.dailyLossLimit)}</span>`;
+
+    // Max drawdown vs allowed
+    const ddUsed = Math.abs(m.maxDDPct / 100 * startEquity);
+    const ddPct = Math.min(100, ddUsed / m.maxDDLimit * 100);
+    setBar('barDD', ddPct);
+    document.getElementById('valDD').innerHTML =
+      `-${fmtMoney(ddUsed)}<span class="of">of -${fmtMoney(m.maxDDLimit)}</span>`;
+
+    // Min trading days (10 min)
+    const daysPct = Math.min(100, m.tradingDays / 10 * 100);
+    setBar('barDays', daysPct);
+    document.getElementById('valDays').innerHTML =
+      `${m.tradingDays}<span class="of">of 10 ${m.tradingDays >= 10 ? '✓' : ''}</span>`;
+  }
+
+  paintMetrix();
+  // refresh every 6s in sync with the live bot tick
+  setInterval(paintMetrix, 6000);
+})();
